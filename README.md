@@ -1,2 +1,3 @@
-# sym_vec_multiplier
-A program expands symbolic expression where each symbol is a vector
+Not ready yet.
+This program will expand symbolic expression where each symbol is a vector or scalar.
+
