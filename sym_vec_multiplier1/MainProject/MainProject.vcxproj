@@ -106,6 +106,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -152,6 +153,14 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="MainProject.cpp" />
+    <ClCompile Include="PrimitiveTypes.cpp" />
+    <ClCompile Include="PrimitiveTypes2.cpp" />
+    <ClCompile Include="TemplateInits.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="PrimitiveTypes.h" />
+    <ClInclude Include="PrimitiveTypes2.h" />
+    <ClInclude Include="TemplatesH.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
