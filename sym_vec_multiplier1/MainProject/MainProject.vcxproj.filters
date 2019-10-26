@@ -27,6 +27,9 @@
     <ClCompile Include="PrimitiveTypes2.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Settings.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="PrimitiveTypes.h">
@@ -36,6 +39,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="PrimitiveTypes2.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Settings.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

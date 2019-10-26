@@ -155,11 +155,13 @@
     <ClCompile Include="MainProject.cpp" />
     <ClCompile Include="PrimitiveTypes.cpp" />
     <ClCompile Include="PrimitiveTypes2.cpp" />
+    <ClCompile Include="Settings.cpp" />
     <ClCompile Include="TemplateInits.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="PrimitiveTypes.h" />
     <ClInclude Include="PrimitiveTypes2.h" />
+    <ClInclude Include="Settings.h" />
     <ClInclude Include="TemplatesH.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

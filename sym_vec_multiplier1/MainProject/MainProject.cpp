@@ -4,6 +4,7 @@
 #include <iostream>
 #include <memory>
 #include "PrimitiveTypes2.h"
+#include "Settings.h"
 //#include "TemplatesH.h"
 
 using namespace std;
@@ -29,6 +30,46 @@ int main()
 	//Scalar s1(L"w");
 	//Scalar s2(L"W");
 	//bool b=s1 == s2;
+
+	/*Vecdotted v(L"a", L"b");*/
+
+	//Unit u;
+	//u.multiplyByVec(L"a");
+	//Vec v(L"s");
+	//u.multiplyByVec(v);
+	//u.multiplyByVec(Vec{L"f"});
+
+	//std::queue<int> q;
+	//q.emplace(1);
+	//q.emplace(2);
+	//int & in = q.front();
+	//q.pop();
+	//std::cout << in << std::endl;
+
+	//Unit u;
+
+
+
+	//auto tmp = Settings::tolerance;
+	//int64_t in = 5;
+	//int64_t in2 = std::move(in);
+
+	//std::list<int> lint;
+	//lint.push_back(1);
+	//lint.push_back(2);
+	//lint.push_back(3);
+	//lint.push_back(4);
+	//auto e = lint.end();
+	//auto bi = lint.begin();
+	//++bi;
+	//auto itnext = bi;
+	//++itnext;
+	//auto newe = e;
+	//--newe;
+	//lint.erase(bi);
+	//cout << *itnext << endl;
+	//cout << *newe << endl;
+
 
 
 
