@@ -1,0 +1,6 @@
+
+syms a
+u =-1+ 7*a*(-a-a)*(8*a +a)+1
+syms b
+u2 = 4*(a+1(b+4))
+print u1

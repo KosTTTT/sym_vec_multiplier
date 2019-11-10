@@ -6,16 +6,21 @@
 //#include <queue>
 #include <list>
 #include "Settings.h"
+#include <initializer_list>
+#include <iostream>
+
 
 
 extern template class std::vector<Vecdotted>;
 extern template class std::vector<Scalar>;
+
 /*! Scalars multiplied together. It might be a single scalar also.*/
 class ScalarGroup
 {
+		friend std::wostream& operator<<(std::wostream& out, ScalarGroup const& u);
 public:
 	ScalarGroup() {}
-	ScalarGroup(int64_t multiple) :
+	explicit ScalarGroup(int64_t multiple) :
 		m_multiple(multiple) {}
 	/*! 
 	Multiplies ScalarGroup sg with this. 
@@ -61,6 +66,10 @@ public:
 	inline bool isOne() const
 	{
 		return m_arrScalar.empty() && m_arrVecdotted.empty() && abs(m_multiple-1) < Settings::tolerance;
+	}
+	inline bool isMinusOne() const
+	{
+		return m_arrScalar.empty() && m_arrVecdotted.empty() && abs(m_multiple +1)< Settings::tolerance;
 	}
 private:
 	template<typename Container, typename T>
@@ -112,6 +121,7 @@ Here a*b is represented by ScalarGroup class
 */
 class Unit
 {
+	friend std::wostream& operator<<(std::wostream& out, Unit const& u);
 public:
 	Unit()
 	{}
@@ -155,7 +165,22 @@ public:
 	void sum(std::unique_ptr<Unit> & u);
 	/*! Multiplies this Unit to argument. Argument and this Unit will be expanded.*/
 	void multiply(std::unique_ptr<Unit> const & u);
-
+	/*! Multiply this Unit by an array of Unit sum. Argument will be moved.The unit becomes not expanded.*/
+	void multiplyBySum(std::list<std::unique_ptr<Unit>> &l);
+	template<typename T>
+	void multiplyByScalar(T&& arg)
+	{
+		m_m.m_sg->addScalar(std::forward<T>(arg));
+		m_expanded = false;
+	}
+	template<typename T>
+	void multiplyByNumber(T&& arg)
+	{
+		m_m.m_sg->addMultipe(m_m.m_sg->multiple()*arg);
+		m_expanded = false;
+	}
+	/*!Appends Unit argument to the terms of this Unit. The argument will vanish. The unit becomes not expanded.*/
+	void appendUnit(std::unique_ptr<Unit> & u);
 private:
 	using sum_queue = std::list<std::unique_ptr<Unit>>;
 	/*
@@ -163,7 +188,7 @@ private:
 	*/
 	void hm(Unit& empty, Unit& notempty);
 
-	/*all elements of v are expanded
+	/*all elements of v are with only one simple mutiple
 	tries to add everything together,if a unit can be added it is removed and is added to another Unit in the array, 
 	*/
 	static void hmta(sum_queue &v);
@@ -177,13 +202,22 @@ private:
 	static sum_queue expand_move(std::unique_ptr<Unit> & UnitChild);
 	/* Turns multiple of this unit to an expanded Unit and returns it. Multiple of this object becomes 1 unless it is zero, then it will be still zero.*/
 	std::unique_ptr<Unit> moveMultiple();
-	/* Turns multiple of this unit to an array of expanded Units with only one simple multiple. If a mutiple was 1, an empty erray is returned. Multiple of this object becomes 1 unless it is zero, then it will be still zero.*/
+	/* Turns multiple of this unit to an array of expanded Units with only one simple multiple. Multiple of this object becomes 1 unless it is zero, then it will be still zero.*/
 	sum_queue moveMultipleq();
 	static sum_queue copy_sum_queue(sum_queue const & v);
-	
+	/*copy unique_ptr*/
+	template<typename T>
+	static void cuptr(std::unique_ptr<T>& destinaton, std::unique_ptr<T> const& sourse)
+	{
+		if (sourse)
+			destinaton.reset(new T(*sourse));
+		else
+			destinaton.reset(nullptr);
+	}
 	/*multiple of the gobal sum of units */
 	class Multiple
 	{
+		friend std::wostream& operator<<(std::wostream& out, Unit const& u);
 	public:
 		Multiple() :
 			m_sg(new ScalarGroup())
@@ -204,10 +238,14 @@ private:
 		}
 		/*returns true if multiple is one*/
 		bool isOne() const;
+		bool isMinusOne() const;
+
 		/*sets this multiple to one*/
 		void setOne();
 		/* Returns true if two Multiples can be added together*/
 		static bool canbeadded(Multiple const& mthis, Multiple const& mother);
+		/*Adds everything except arrays of Units.m will be deleted*/
+		void add(Multiple & m);
 		/*multiplies other to this*/
 		void multiply(Multiple const & other);
 	private:
@@ -229,14 +267,16 @@ private:
 	///* Move unit to this multiple. It should be done only if unit is expanded.*/
 	//void mUtoM(std::unique_ptr<Unit> &unit);
 
+
 	/*Multiple of Global terms of units or just a term if there are no Global terms*/
 	Multiple m_m;
 	/*Global terms of units*/
 	sum_queue m_s;
+private:
 	/*true if the unit is expanded, e.g. 2(a + 3) is not expanded but 2a + 6 is.*/
 	bool m_expanded = false;
 };
 
-
+std::wostream& operator<<(std::wostream& out, Unit const& u);
 
 

@@ -152,13 +152,17 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Local_vars.cpp" />
     <ClCompile Include="MainProject.cpp" />
+    <ClCompile Include="Parser.cpp" />
     <ClCompile Include="PrimitiveTypes.cpp" />
     <ClCompile Include="PrimitiveTypes2.cpp" />
     <ClCompile Include="Settings.cpp" />
     <ClCompile Include="TemplateInits.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Local_vars.h" />
+    <ClInclude Include="Parser.h" />
     <ClInclude Include="PrimitiveTypes.h" />
     <ClInclude Include="PrimitiveTypes2.h" />
     <ClInclude Include="Settings.h" />

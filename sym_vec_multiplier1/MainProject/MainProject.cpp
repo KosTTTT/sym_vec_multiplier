@@ -5,6 +5,8 @@
 #include <memory>
 #include "PrimitiveTypes2.h"
 #include "Settings.h"
+#include <stdexcept>
+#include "Parser.h"
 //#include "TemplatesH.h"
 
 using namespace std;
@@ -16,7 +18,7 @@ using namespace std;
 //template <typename T>
 //T functest02(typename Identity<T>::type arg);
 
-int main()
+int main(int argc, char**argv)
 {
     //std::cout << "Hello World!\n";
 
@@ -71,8 +73,82 @@ int main()
 	//cout << *newe << endl;
 
 
+	{//1
+		//std::unique_ptr<Unit> umain(new Unit);
+		//{
+		//	std::unique_ptr<Unit> u1(new Unit);
+		//	u1->m_m.m_sg->addScalar(L"a");
+		//	u1->m_m.m_sg->addMultipe(5);
+		//	std::unique_ptr<Unit> u11(new Unit);
+		//	u11->multiplyByVec(L"v");
+		//	std::unique_ptr<Unit> u12(new Unit);
+		//	u12->multiplyByVec(L"v");
+		//	u12->m_m.m_sg->addMultipe(2);
+		//	std::list<unique_ptr<Unit>> ltmp;
+		//	ltmp.emplace_back(std::move(u11));
+		//	ltmp.emplace_back(std::move(u12));
+		//	u1->multiplyBySum(ltmp);
+
+		//	umain->m_s.emplace_back(std::move(u1));
+		//}
+		//{
+
+		//	std::unique_ptr<Unit> u1(new Unit);
+		//	u1->m_m.m_sg->addScalar(L"a");
+		//	u1->m_m.m_sg->addMultipe(3);
+		//	{
+		//		std::unique_ptr<Unit> u11(new Unit);
+		//		u11->multiplyByVec(L"v");
+		//		std::unique_ptr<Unit> u12(new Unit);
+		//		std::list<unique_ptr<Unit>> ltmp;
+		//		ltmp.emplace_back(std::move(u11));
+		//		ltmp.emplace_back(std::move(u12));
+		//		u1->multiplyBySum(ltmp);
+		//	}
+		//	{
+		//		std::unique_ptr<Unit> u21(new Unit(5));
+		//		u21->multiplyByVec(L"v");
+		//		std::unique_ptr<Unit> u22(new Unit);
+		//		u22->m_m.m_sg->addScalar(L"a");
+		//		std::list<unique_ptr<Unit>> ltmp;
+		//		ltmp.emplace_back(std::move(u21));
+		//		ltmp.emplace_back(std::move(u22));
+		//		u1->multiplyBySum(ltmp);
+		//	}
 
 
+		//	umain->m_s.emplace_back(std::move(u1));
+		//}
+		//umain->expand();
+	}
+	try
+	{
+		if (argc > 1)
+			handle_input(argv[1]);
+		else
+			cout << "Must specify input file name." << endl;
+	}
+	catch (string const& str)
+	{
+		cout << str << endl;
+	}
+	catch (std::exception const & e)
+	{
+		cout << e.what() << endl;
+	}
+	catch (...)
+	{
+		cout << "unknown exception" << endl;
+	}
+	//for (auto& pair : lv.m_lv)
+	//{
+	//	if (pair.second)
+	//	{
+	//		pair.second->expand();
+	//		printu(pair.first, *pair.second);
+	//	}
+
+	//}
 }
 
 // Run program: Ctrl + F5 or Debug > Start Without Debugging menu
