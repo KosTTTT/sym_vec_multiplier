@@ -141,10 +141,16 @@ public:
 		{
 			//multiply both vectors together (dot product)
 
+			std::unique_ptr<ScalarGroup> s(new ScalarGroup);
 			if constexpr (std::is_same_v<std::decay_t<T>, Vec>)
-				m_m.m_sg->addVecdotted(std::move(*m_m.m_vec),std::forward<T>(vec));
-			else 
-				m_m.m_sg->addVecdotted(std::move(*m_m.m_vec), Vec(std::forward<T>(vec)));
+			{
+				s->addVecdotted(std::move(*m_m.m_vec), std::forward<T>(vec));
+			}
+			else
+			{
+				s->addVecdotted(std::move(*m_m.m_vec), Vec(std::forward<T>(vec)));
+			}
+			m_m.m_sg->multiply(s);
 			m_m.m_vec.reset(nullptr);
 		}
 		else
@@ -170,7 +176,9 @@ public:
 	template<typename T>
 	void multiplyByScalar(T&& arg)
 	{
-		m_m.m_sg->addScalar(std::forward<T>(arg));
+		std::unique_ptr<ScalarGroup> s(new ScalarGroup);
+		s->addScalar(std::forward<T>(arg));
+		m_m.m_sg->multiply(s);
 		m_expanded = false;
 	}
 	template<typename T>

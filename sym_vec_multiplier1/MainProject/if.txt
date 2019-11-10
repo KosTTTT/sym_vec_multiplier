@@ -1,6 +1,15 @@
-
-syms a
-u =-1+ 7*a*(-a-a)*(8*a +a)+1
-syms b
-u2 = 4*(a+1(b+4))
-print u1
+#symv v,w
+#u = v*w+w*v*2
+#expand u
+#print u
+syms x,y
+u2 = (x+y)(x+y)(x+y)(x+y)(x+y)(x+y)(x+y)(x+y)(x+y)(x+y)-(x+y)(x+y)(x+y)(x+y)(x+y)(x+y)(x+y)(x+y)(x+y)(x+y)
+#u3 = (a-b)(a-b)
+expand u2
+print u2
+#print u3
+#u = a+b-1*3b
+#u1 = a(1+a) +a -2*3*a*a
+#expand u,u1
+#print u
+#print u1

@@ -5,6 +5,7 @@
 #include <iostream>
 #include <limits>
 #include <algorithm>
+#include <functional>
 using namespace std;
 
 
@@ -33,11 +34,29 @@ namespace {
 	{
 		if (lv.m_ss.find(symbol) != lv.m_ss.end())
 		{
+			if (lv.m_vs.find(symbol) != lv.m_vs.end())
+			{
+				//error--
+				string str1("error in line ");
+				str1 += std::to_string(lineCurrent);
+				string str2(". The scalar symbol already defined in vector symbols");
+				str1 += str2;
+				throw std::exception(str1.c_str());
+			}
 			//it is a scalar symbol
 			unit.multiplyByScalar(symbol);
 		}
 		else if (lv.m_vs.find(symbol) != lv.m_vs.end())
 		{
+			//if (lv.m_ss.find(symbol) != lv.m_ss.end())
+			//{
+			//	//error--
+			//	string str1("error in line ");
+			//	str1 += std::to_string(lineCurrent);
+			//	string str2(". The vector symbol already defined in scalar symbols");
+			//	str1 += str2;
+			//	throw std::exception(str1.c_str());
+			//}
 			unit.multiplyByVec(symbol);
 		}
 		else
@@ -170,11 +189,12 @@ namespace {
 		}
 		else
 		{
-			auto it_found = std::find_if(lv.m_lv.begin(), lv.m_lv.end(),
-				[&strUname](auto const& elpair) -> bool
-			{
-				return strUname==elpair.first;
-			});
+			//auto it_found = std::find_if(lv.m_lv.begin(), lv.m_lv.end(),
+			//	[&strUname](auto const& elpair) -> bool
+			//{
+			//	return strUname==elpair.first;
+			//});
+			auto it_found = lv.m_lv.find(strUname);
 			if (it_found != lv.m_lv.end())
 			{
 				printu((*it_found).first, *(*it_found).second);
@@ -191,11 +211,51 @@ namespace {
 	/*handles a keyword input, or returns false if no such keyword defined*/
 	bool handleKeyword(std::wstring const& str)
 	{
-		auto hf1 = [&](auto& container)
+		//auto hf1 = [&](auto& container)
+		//{
+		//	waitForVarName();
+		//	auto str = get_variable();
+		//	container.insert(str);
+
+		//	//read other symbols separated by commas or blanks
+		//	bool comma_was_hit = false;
+		//	while (read_next_char())
+		//	{
+		//		if (ch == L',')
+		//		{
+		//			comma_was_hit = true;
+		//		}
+		//		else if (ch == L'\n')
+		//		{
+		//			++lineCurrent;
+		//			if (!comma_was_hit)
+		//			{
+		//				break;//++end
+		//			}
+		//		}
+		//		else if (ch == L'\r' || ch == ' ')
+		//		{
+		//			continue;
+		//		}
+		//		else if (is_character())
+		//		{
+		//			isfile.putback(ch);
+		//			auto str = get_variable();
+		//			container.insert(str);
+		//			comma_was_hit = false;
+		//		}
+		//		else
+		//			throw lineCurrent;
+		//	}
+		//	if (comma_was_hit)
+		//		throw lineCurrent;//error--
+		//};
+
+		auto hf1 = [&](auto& func)
 		{
 			waitForVarName();
 			auto str = get_variable();
-			container.insert(str);
+			func(str);
 
 			//read other symbols separated by commas or blanks
 			bool comma_was_hit = false;
@@ -221,7 +281,7 @@ namespace {
 				{
 					isfile.putback(ch);
 					auto str = get_variable();
-					container.insert(str);
+					func(str);
 					comma_was_hit = false;
 				}
 				else
@@ -233,13 +293,26 @@ namespace {
 		if (str == L"symv")
 		{
 			//define a vector variable symbol
-			hf1(lv.m_vs);
+
+			std::function<void(std::wstring const& str)> f=
+				[&](std::wstring const & str)
+			{
+				lv.m_vs.insert(str);
+			};
+			hf1(f);
 			return true;
 		}
 		else if (str == L"syms")
 		{
 			//define a scalar variable symbol
-			hf1(lv.m_ss);
+			//hf1(lv.m_ss);
+
+			std::function<void(std::wstring const& str)> f =
+				[&](std::wstring const& str)
+			{
+				lv.m_ss.insert(str);
+			};
+			hf1(f);
 			return true;
 		}
 		else if (str == L"print")
@@ -247,6 +320,30 @@ namespace {
 			haldlePrintKeyWord();
 			return true;
 		}
+		else if (str == L"expand")
+		{
+			std::function<void(std::wstring const& str)> f =
+				[&](std::wstring const& str)
+			{
+				//auto it_found = std::find_if(lv.m_lv.begin(), lv.m_lv.end(),
+				//	[&](auto const& pairnext)->bool
+				//{
+				//	return pairnext.first == str;
+				//});
+				auto it_found = lv.m_lv.find(str);
+				if (it_found != lv.m_lv.end())
+				{
+					if ((*it_found).second)
+					{
+						Unit& u = *(*it_found).second;
+						u.expand();
+					}
+				}
+			};
+			hf1(f);
+			return true;
+		}
+
 		return false;
 	}
 	//reading (5*t + e + 3 - 2*u...) and appending it to the multiple of u

@@ -1,4 +1,5 @@
 #include "PrimitiveTypes.h"
+#include "Settings.h"
 
 Symbol::Symbol():
 	m_sym()
@@ -76,8 +77,9 @@ std::wostream& operator<<(std::wostream& out, Vecdotted const& u)
 }
 std::wostream& operator<<(std::wostream& out, Scalar const& u)
 {
-	return out << u.m_sym;
-	if(u.m_power!=1)
-		out<< std::wstring{ L"^" } << u.m_power;
-	return out;
+	out << u.m_sym;
+	//if the power of scalar equals 1 do not print the power. User will assume it is 1
+	if (abs(static_cast<Settings::type_real>(u.m_power) - 1) < Settings::tolerance)
+		return out;
+	return out<< std::wstring{ L"^" } << u.m_power;
 }

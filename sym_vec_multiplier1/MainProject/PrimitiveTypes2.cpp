@@ -80,38 +80,67 @@ bool ScalarGroup::canBeAdded(std::unique_ptr<ScalarGroup>const& other) const
 {
 	//if symbolic variables are the same in any order than two ScalarGroups can be added
 
-	//compare m_arrScalar
-
 	auto hf = [&](auto const& arthis, auto const& arother)->bool
 	{
+		if constexpr (!std::is_same_v < std::decay_t<decltype(arthis.front())>, std::decay_t<decltype(arother.front())>>)
+		{
+			static_assert(false, "compile error is here");
+		}
+
 		auto const sc_size = arother.size();
 
 		//размеры должны совпадать
 		if (sc_size != arthis.size())
 		{
-			//if we are trying to add to zero
-			if (m_multiple && other->m_multiple)
-				return false;
-			return true;
+			return false;
 		}
 
 		auto const m_arrScalar_end = arthis.end();
 		for (decltype(arother.size())i = 0; i < sc_size; ++i)
 		{
-			//if symbol is not found we cannot add them
-			if (std::find(arthis.begin(), m_arrScalar_end, arother[i]) == m_arrScalar_end)
-				return false;
+
+			if constexpr (std::is_same_v<std::decay_t<decltype(arthis.front())>, Vecdotted>)
+			{
+				//check if the number of symbol occurrence is the same
+
+				Vecdotted const& vother = arother[i];
+
+				if (std::count(arthis.begin(), arthis.end(), vother) != std::count(arother.begin(), arother.end(), vother))
+					return false;//--error
+			}
+			else if constexpr (std::is_same_v<std::decay_t<decltype(arthis.front())>, Scalar>)
+			{
+				//if symbol is not found we cannot add them
+
+				auto it_found = std::find(arthis.begin(), m_arrScalar_end, arother[i]);
+				if (it_found == m_arrScalar_end)
+					return false;
+			}
+			else
+			{
+				static_assert(false, " compile eror is here");
+			}
 		}
 		return true;
 	};
-	if(other)
+	if (other)
+	{
+		if (abs(m_multiple) < Settings::tolerance || abs(other->m_multiple)< Settings::tolerance)// if multiple is zero
+			return false;
+
 		return hf(m_arrScalar, other->m_arrScalar) && hf(m_arrVecdotted, other->m_arrVecdotted);
+	}
 	return false;
 }
 ScalarGroup& ScalarGroup::add(std::unique_ptr<ScalarGroup>& sg)
 {
 	if (sg)
 	{
+		//if (abs(m_multiple) < Settings::tolerance || abs(sg->m_multiple) < Settings::tolerance)//adding 0 
+		//{
+		//	sg.reset(nullptr);
+		//	return *this;
+		//}
 		m_multiple += sg->m_multiple;
 		sg.reset(nullptr);
 	}
@@ -746,7 +775,7 @@ std::wostream& operator<<(std::wostream& out, Unit const& u)
 	//else
 	//{
 
-
+		bool bprint_m_before_v = false;
 		if (u.m_m.m_sg)
 		{
 			//--decide print multiple or not
@@ -772,10 +801,17 @@ std::wostream& operator<<(std::wostream& out, Unit const& u)
 				}
 			}
 			else
+			{
+				bprint_m_before_v = true;
 				out << *u.m_m.m_sg;
+			}
 		}
 		if (u.m_m.m_vec)
 		{
+			if (bprint_m_before_v)
+			{
+				out << std::wstring{ L"*" };
+			}
 			out << *u.m_m.m_vec;
 		}
 		//print all multiples with brackets, e.g. (7*r +1)*(8u-i)
@@ -796,6 +832,8 @@ std::wostream& operator<<(std::wostream& out, Unit const& u)
 					{
 						if (*it)
 						{
+							if ((*it)->m_m.isZero())
+								continue;
 							if ((*it)->m_m.m_sg)
 								if ((*it)->m_m.m_sg->multiple() > 0)
 								{
@@ -831,12 +869,19 @@ std::wostream& operator<<(std::wostream& out, Unit const& u)
 				if (*it)
 				{
 					if ((*it)->m_m.m_sg)
-						if ((*it)->m_m.m_sg->multiple() > 0)
+					{
+						if ((*it)->m_m.isZero())
+						{
+							continue;
+						}
+						else if ((*it)->m_m.m_sg->multiple() > 0)
 						{
 							out << std::wstring{ L"+" };
 						}
-					Unit const& utmp = **it;
-					out << utmp;
+
+						Unit const& utmp = **it;
+						out << utmp;
+					}
 				}
 			}
 		}
