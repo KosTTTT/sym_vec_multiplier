@@ -22,4 +22,7 @@ namespace
 	//void MultiplyBySymbol(std::wstring const& symbol, Unit& unit);
 
 	void readUnit(std::unique_ptr<Unit>& u, bool allow_new_line = false);
+	/*check if a symbol was defined elsewhere with the same name*/
+	bool cvnwd(std::wstring const& str);
+	//void throwTheVariableWasDefinedError(std::wstring const & str);
 }

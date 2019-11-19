@@ -32,6 +32,7 @@ namespace {
 	}
 	void MultiplyBySymbol(std::wstring const& symbol, Unit& unit)
 	{
+		auto const it01 = lv.m_lv.find(symbol);
 		if (lv.m_ss.find(symbol) != lv.m_ss.end())
 		{
 			if (lv.m_vs.find(symbol) != lv.m_vs.end())
@@ -48,16 +49,18 @@ namespace {
 		}
 		else if (lv.m_vs.find(symbol) != lv.m_vs.end())
 		{
-			//if (lv.m_ss.find(symbol) != lv.m_ss.end())
-			//{
-			//	//error--
-			//	string str1("error in line ");
-			//	str1 += std::to_string(lineCurrent);
-			//	string str2(". The vector symbol already defined in scalar symbols");
-			//	str1 += str2;
-			//	throw std::exception(str1.c_str());
-			//}
 			unit.multiplyByVec(symbol);
+		}
+		else if (it01 != lv.m_lv.end())
+		{
+			Unit const& u = *(*it01).second;
+			//we are trying to multiply by another equation
+
+			//make a copy
+			std::unique_ptr<Unit>ucopy(new Unit(u));
+			Unit::sum_queue l;
+			l.emplace_back(std::move(ucopy));
+			unit.multiplyBySum(l);
 		}
 		else
 		{
@@ -203,54 +206,31 @@ namespace {
 			else
 			{
 				//error--
-				throw std::exception("Specified unit name not found");
+				throw std::exception("Error in print. Specified unit name not found");
 			}
 		}
 	}
+	void handle_group()
+	{
+		//get the name of a variable we want to group
 
+		waitForVarName();
+		auto str_uname = get_variable();
+		auto it_found = lv.m_lv.find(str_uname);
+		if (it_found == lv.m_lv.end())
+			throw lineCurrent;//error--
+
+
+		//unit is being changed
+		Unit& u = *(*it_found).second;
+		//get the name of a variable we want group
+		waitForVarName();
+		auto str_group_var = get_variable();
+		u.group(str_group_var);
+	}
 	/*handles a keyword input, or returns false if no such keyword defined*/
 	bool handleKeyword(std::wstring const& str)
 	{
-		//auto hf1 = [&](auto& container)
-		//{
-		//	waitForVarName();
-		//	auto str = get_variable();
-		//	container.insert(str);
-
-		//	//read other symbols separated by commas or blanks
-		//	bool comma_was_hit = false;
-		//	while (read_next_char())
-		//	{
-		//		if (ch == L',')
-		//		{
-		//			comma_was_hit = true;
-		//		}
-		//		else if (ch == L'\n')
-		//		{
-		//			++lineCurrent;
-		//			if (!comma_was_hit)
-		//			{
-		//				break;//++end
-		//			}
-		//		}
-		//		else if (ch == L'\r' || ch == ' ')
-		//		{
-		//			continue;
-		//		}
-		//		else if (is_character())
-		//		{
-		//			isfile.putback(ch);
-		//			auto str = get_variable();
-		//			container.insert(str);
-		//			comma_was_hit = false;
-		//		}
-		//		else
-		//			throw lineCurrent;
-		//	}
-		//	if (comma_was_hit)
-		//		throw lineCurrent;//error--
-		//};
-
 		auto hf1 = [&](auto& func)
 		{
 			waitForVarName();
@@ -297,7 +277,14 @@ namespace {
 			std::function<void(std::wstring const& str)> f=
 				[&](std::wstring const & str)
 			{
-				lv.m_vs.insert(str);
+				if (cvnwd(str))
+				{
+					lv.m_vs.insert(str);
+				}
+				else
+				{
+					throw lineCurrent;
+				}
 			};
 			hf1(f);
 			return true;
@@ -310,7 +297,10 @@ namespace {
 			std::function<void(std::wstring const& str)> f =
 				[&](std::wstring const& str)
 			{
-				lv.m_ss.insert(str);
+				if (cvnwd(str))
+					lv.m_ss.insert(str);
+				else
+					throw lineCurrent;
 			};
 			hf1(f);
 			return true;
@@ -320,16 +310,16 @@ namespace {
 			haldlePrintKeyWord();
 			return true;
 		}
+		else if (str == L"group")
+		{
+			handle_group();
+			return true;
+		}
 		else if (str == L"expand")
 		{
 			std::function<void(std::wstring const& str)> f =
 				[&](std::wstring const& str)
 			{
-				//auto it_found = std::find_if(lv.m_lv.begin(), lv.m_lv.end(),
-				//	[&](auto const& pairnext)->bool
-				//{
-				//	return pairnext.first == str;
-				//});
 				auto it_found = lv.m_lv.find(str);
 				if (it_found != lv.m_lv.end())
 				{
@@ -339,11 +329,39 @@ namespace {
 						u.expand();
 					}
 				}
+				else
+				{
+					throw lineCurrent;
+				}
 			};
 			hf1(f);
 			return true;
 		}
-
+		else if (str == L"clear")//erase one, some or all variables from the local variables
+		{
+			std::function<void(std::wstring const& str)> f =
+				[&](std::wstring const& str)
+			{
+				if (str == L"all")
+				{
+					lv.m_lv.clear();
+					lv.m_ss.clear();
+					lv.m_vs.clear();
+				}
+				else
+				{
+					auto it_found = lv.m_lv.find(str);
+					if (it_found != lv.m_lv.end())
+					{
+						lv.m_lv.erase(it_found);
+					}
+					else
+						throw lineCurrent;
+				}
+			};
+			hf1(f);
+			return true;
+		}
 		return false;
 	}
 	//reading (5*t + e + 3 - 2*u...) and appending it to the multiple of u
@@ -656,7 +674,25 @@ void handle_input(char const* fileName)
 		throw exception(str.c_str());
 	}
 }
-
+namespace
+{
+	//void throwTheVariableWasDefinedError(std::wstring const& str)
+	//{
+	//	string str1("Error in line ");
+	//	str1 += std::to_string(lineCurrent);
+	//	string str2(" .The variable ");
+	//}
+	bool cvnwd(std::wstring const& str)
+	{
+		if (lv.m_lv.find(str) != lv.m_lv.end())
+			return false;
+		if (lv.m_ss.find(str) != lv.m_ss.end())
+			return false;
+		if (lv.m_vs.find(str) != lv.m_vs.end())
+			return false;
+		return true;//++
+	}
+}
 void printu(std::wstring uname, Unit const& u)
 {
 	uname += L".txt";

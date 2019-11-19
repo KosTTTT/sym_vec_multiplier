@@ -1,7 +1,7 @@
 ﻿#include "PrimitiveTypes2.h"
 #include <algorithm>
 #include <type_traits>
-
+#include <utility>
 using namespace std;
 
 
@@ -449,7 +449,7 @@ void Unit::sum(std::unique_ptr<Unit>& u)
 			auto const otherend = u->m_s.end();
 			for (auto othernext = u->m_s.begin(); othernext != otherend; ++othernext)
 			{
-				if (Multiple::canbeadded((*thisnext)->m_m,(*othernext)->m_m))
+				if (Multiple::canbeadded((*thisnext)->m_m, (*othernext)->m_m))
 				{
 					(*thisnext)->sum(*othernext);
 				}
@@ -589,7 +589,9 @@ void Unit::Multiple::multiply(Multiple const & other)
 {
 	if (m_vec && other.m_vec)
 	{
-		m_sg->addVecdotted(*m_vec, *other.m_vec);
+		unique_ptr<ScalarGroup> s(new ScalarGroup);
+		s->addVecdotted(*m_vec, *other.m_vec);
+		m_sg->multiply(s);
 		m_vec.reset(nullptr);
 	}
 	else if (!m_vec && other.m_vec)
@@ -744,6 +746,123 @@ void Unit::appendUnit(std::unique_ptr<Unit>& u)
 {
 	m_s.emplace_back(std::move(u));
 	m_expanded = false;
+}
+void Unit::group(std::wstring const& str)
+{
+	expand();
+	
+	//the unit either a simple multiple or the multiple is one and it has a list or terms like 5*a + 2*b etc.
+
+	if (m_s.empty())
+		return;//++no need to group
+
+
+	auto hmv = [&]()
+	{
+		auto it_end = m_s.end();
+		auto it_ret = it_end;
+		for (auto it_next = m_s.begin(); it_next != it_end; ++it_next)
+		{
+			if (*it_next)
+			{
+				Unit const& u = **it_next;
+				if (u.m_m.m_vec)
+				{
+					if (u.m_m.m_vec->m_sym == str)
+					{
+						return it_next;
+					}
+				}
+			}
+		}
+		return it_ret;
+	};
+	//list with grouped Units e.g. t^2(u+1) + t(a+u)...
+	sum_queue msnew;
+	bool work = true;
+	while (!m_s.empty() && work)
+	{
+		auto p = h_fsm(str);
+		if (p.first != m_s.end())
+		{
+			std::unique_ptr<Unit> u = std::move(*p.first);
+			auto it_next = p.first;
+			++it_next;
+			m_s.erase(p.first);
+
+			//a unit like t*(a+b+d)
+			std::unique_ptr<Unit> unew(new Unit);
+			unew->multiplyByScalar(std::move(*p.second));
+			u->m_m.m_sg->m_arrScalar.erase(p.second);
+			//fill ms with units without the common multiple
+			sum_queue ms;
+			ms.emplace_back(std::move(u));
+
+			auto it_end = m_s.end();
+			while( it_next != it_end )
+			{
+				auto it_tmp = it_next;
+				++it_tmp;
+				Unit& u = **it_next;
+				auto it_end2 = u.m_m.m_sg->m_arrScalar.end();
+				auto it_found = std::find(u.m_m.m_sg->m_arrScalar.begin(), it_end2, unew->m_m.m_sg->m_arrScalar.front());
+				if (it_found != it_end2)
+				{
+					u.m_m.m_sg->m_arrScalar.erase(it_found);
+					ms.emplace_back(std::move(*it_next));
+					m_s.erase(it_next);
+				}
+				it_next = it_tmp;
+			}
+
+			unew->multiplyBySum(ms);
+			msnew.emplace_back(std::move(unew));
+		}
+		else
+		{
+			//find if a vector has the same symbolic name
+			auto pv = hmv();
+			if (pv != m_s.end())
+			{
+				//a unit e.g. v(a+b+c*d) we will append to msnew
+				std::unique_ptr<Unit> unew(new Unit);
+				std::unique_ptr<Unit>& u = *pv;
+				Vec& v = *u->m_m.m_vec;
+				unew->m_m.m_vec = std::move(u->m_m.m_vec);
+				auto it_next = pv;
+				++it_next;
+				sum_queue sum;
+				sum.emplace_back(std::move(u));
+				m_s.erase(pv);
+
+				auto end = m_s.end();
+				while (it_next != end)
+				{
+					auto it_tmp = it_next;
+					++it_tmp;
+					Unit& unext = **it_next;
+					if (unext.m_m.m_vec)
+					{
+						if (*unext.m_m.m_vec == *unew->m_m.m_vec)
+						{
+							unext.m_m.m_vec.reset(nullptr);
+							sum.emplace_back(std::move(*it_next));
+							m_s.erase(it_next);
+						}
+					}
+					it_next = it_tmp;
+				}
+				unew->multiplyBySum(sum);
+				msnew.emplace_back(std::move(unew));
+			}
+			else
+				break;//++exit	
+		}	
+	}
+	if (msnew.empty())
+		return;//++end
+	m_expanded = false;
+	m_s.splice(m_s.begin(), msnew);//++end
 }
 std::wostream& operator<<(std::wostream& out, Unit const& u)
 {

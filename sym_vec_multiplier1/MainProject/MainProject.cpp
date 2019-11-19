@@ -7,6 +7,7 @@
 #include "Settings.h"
 #include <stdexcept>
 #include "Parser.h"
+#include <iterator>
 //#include "TemplatesH.h"
 
 using namespace std;
@@ -72,6 +73,10 @@ int main(int argc, char**argv)
 	//cout << *itnext << endl;
 	//cout << *newe << endl;
 
+	//std::list<int> l={1,2};
+	//std::list<int> l2 = {0};
+	//l.splice(l.begin(), l2);
+	//std::copy(l.begin(), l.end(), std::ostream_iterator<int>(cout," "));
 
 	{//1
 		//std::unique_ptr<Unit> umain(new Unit);

@@ -1,15 +1,15 @@
-#symv v,w
-#u = v*w+w*v*2
-#expand u
-#print u
-syms x,y
-u2 = (x+y)(x+y)(x+y)(x+y)(x+y)(x+y)(x+y)(x+y)(x+y)(x+y)-(x+y)(x+y)(x+y)(x+y)(x+y)(x+y)(x+y)(x+y)(x+y)(x+y)
-#u3 = (a-b)(a-b)
-expand u2
-print u2
-#print u3
-#u = a+b-1*3b
-#u1 = a(1+a) +a -2*3*a*a
-#expand u,u1
-#print u
-#print u1
+symv x3s, dx3, x2s, dx2, x1s, dx1
+syms t, R2
+x3 = x3s+t*dx3
+x2 = x2s+t*dx2
+x1 = x1s+t*dx1
+x32 = x3-x2
+x21 = x2-x1
+x12 = x1-x2
+u11 = x32*x32*R2 - x21*x21*x32*x32 - 2*x21*x32*x12*x32-x12*x32*x12*x32
+group u11 t
+print u11
+
+
+
+

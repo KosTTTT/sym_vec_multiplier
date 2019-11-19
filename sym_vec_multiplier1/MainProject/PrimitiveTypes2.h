@@ -17,6 +17,7 @@ extern template class std::vector<Scalar>;
 /*! Scalars multiplied together. It might be a single scalar also.*/
 class ScalarGroup
 {
+	friend class Unit;
 		friend std::wostream& operator<<(std::wostream& out, ScalarGroup const& u);
 public:
 	ScalarGroup() {}
@@ -189,8 +190,17 @@ public:
 	}
 	/*!Appends Unit argument to the terms of this Unit. The argument will vanish. The unit becomes not expanded.*/
 	void appendUnit(std::unique_ptr<Unit> & u);
-private:
+	/*!
+	For each term a unit has group them together if they has common multiple symbol str.
+	E.g. if u was x*t + a*t ,
+	after call with argument "t"
+	u becomes t(x+a).
+	If a symbol with str will not be found. The method will just expand the Unit and return
+	*/
+	void group(std::wstring const & str);
 	using sum_queue = std::list<std::unique_ptr<Unit>>;
+private:
+
 	/*
 	both args are expanded.
 	*/
@@ -222,6 +232,37 @@ private:
 		else
 			destinaton.reset(nullptr);
 	}
+	//returns an iterator to the unit from m_s with a maximum power Scalar and this Scalar in its array
+	//will return end if nothing was found
+	auto h_fsm(std::wstring const& str)
+	{
+		auto const it_end = m_s.end();
+		auto it_ret1 = it_end;
+		decltype((*m_s.begin())->m_m.m_sg->m_arrScalar.end()) it_ret2;
+		Settings::type_real vmax = std::numeric_limits<Settings::type_real>::min();
+		for (auto it_next = m_s.begin(); it_next != it_end; ++it_next)
+		{
+			if (*it_next)
+			{
+				Unit& u = **it_next;
+				auto const it_end02 = u.m_m.m_sg->m_arrScalar.end();
+				for (auto it02 = u.m_m.m_sg->m_arrScalar.begin(); it02 != it_end02; ++it02)
+				{
+					Scalar const& sc = *it02;
+					if (sc.m_sym == str)
+					{
+						if (sc.m_power > vmax)
+						{
+							vmax = sc.m_power;
+							it_ret1 = it_next;
+							it_ret2 = it02;
+						}
+					}
+				}
+			}
+		}
+		return std::make_pair(it_ret1, it_ret2);//++
+	};
 	/*multiple of the gobal sum of units */
 	class Multiple
 	{
