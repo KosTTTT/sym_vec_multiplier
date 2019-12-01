@@ -74,8 +74,8 @@ int main(int argc, char**argv)
 	//cout << *newe << endl;
 
 	//std::list<int> l={1,2};
-	//std::list<int> l2 = {0};
-	//l.splice(l.begin(), l2);
+	//std::list<int> l2 = {3};
+	//l.splice(l.end(), l2);
 	//std::copy(l.begin(), l.end(), std::ostream_iterator<int>(cout," "));
 
 	{//1

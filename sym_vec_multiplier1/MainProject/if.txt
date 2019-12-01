@@ -6,9 +6,26 @@ x1 = x1s+t*dx1
 x32 = x3-x2
 x21 = x2-x1
 x12 = x1-x2
-u11 = x32*x32*R2 - x21*x21*x32*x32 - 2*x21*x32*x12*x32-x12*x32*x12*x32
-group u11 t
-print u11
+
+
+u1=R2*x32*x32-x21*x21*x32*x32-2*x21*x32*x12*x32-x12*x32*x12*x32
+group u1 t
+print u1
+clear u1
+
+utmp1 = x32*x32*(dx1-dx2)
+expand utmp1
+print utmp1
+utmp2 = x12*x32*(dx3-dx2)
+expand utmp2
+print utmp2
+utmp3 = x12*x32*x32
+expand utmp3
+print utmp3
+u2 = (utmp1-utmp2)*(x21+utmp3)
+expand u2
+group u2 t
+print u2
 
 
 

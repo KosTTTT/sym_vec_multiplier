@@ -2,6 +2,7 @@
 
 #include <type_traits>
 #include < cstdint >
+#include <memory>
 namespace Settings
 {
 	/*type for presize calculations*/
@@ -21,5 +22,14 @@ namespace Settings
 			//static_assert(false, "wrong data type for type_real");
 	}
 	extern type_real tolerance;
+}
+/*copy unique_ptr*/
+template<typename T>
+static void cuptr(std::unique_ptr<T>& destinaton, std::unique_ptr<T> const& sourse)
+{
+	if (sourse)
+		destinaton.reset(new T(*sourse));
+	else
+		destinaton.reset(nullptr);
 }
 

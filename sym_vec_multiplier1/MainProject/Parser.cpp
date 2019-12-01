@@ -49,7 +49,17 @@ namespace {
 		}
 		else if (lv.m_vs.find(symbol) != lv.m_vs.end())
 		{
-			unit.multiplyByVec(symbol);
+			if (unit.has_parenthesis_m())
+			{//if a unit already has a multiple in brackers we do not know whether it is a scalar or a vector. In case it will turn out a vector after an expansion we want put multiple vector at the end of existing expression. As a precaution I put vector in a separate unit and multiple to the right of the existing expression.
+				std::unique_ptr<Unit>newUnit(new Unit);
+				newUnit->multiplyByVec(symbol);
+				newUnit->expand();
+				Unit::sum_queue l;
+				l.emplace_back(std::move(newUnit));
+				unit.multiplyBySum(l);
+			}
+			else
+				unit.multiplyByVec(symbol);
 		}
 		else if (it01 != lv.m_lv.end())
 		{
@@ -490,7 +500,7 @@ namespace {
 				if (!u)
 					return;//error--
 			}
-			else if (ch == L')')
+			else if (ch == L')')//in case this method is called from readSumQueue
 			{
 				isfile.putback(ch);
 				break;//++return
@@ -510,6 +520,7 @@ namespace {
 	}
 	/* Is called from the main loop. Creates and adds Unit with the name UnitName to the local variables. 
 	The method adds terms to newly created Unit and does not proceed to handle next Units. Next Unit will be handled by this method when called from the main loop again.
+	Method does not multiplies read term by anything. The multiple of newly read unit is nullptr
 	@param UnitName The name which is associated with the unit
 	@param beg_symbol Optional parameter. The first symbol of the Unit has already been read.*/
 	void readUnits(std::wstring const & UnitName, std::wstring const & beg_symbol = std::wstring())
