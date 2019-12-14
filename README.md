@@ -1,7 +1,7 @@
-This program opens parentheses in symbolic expression where each symbol is a vector or scalar.
+This program opens parentheses in a symbolic expression where each symbol is a vector or a scalar.
 
 To run this program.
-1) Create an input file. And specify it as an input to a program
+1) Create an input file. And specify its name as an input to a program
 In the file one may write.
 
 #example 1
@@ -33,5 +33,10 @@ clear all
 
 
 #example 3
-
+#define symbolic vector variables
+symv x,y
+f = x*y*y*x + y*x*x*y
+expand f
+print f
+#prints 2*_xdot_y*_ydot_x
 
