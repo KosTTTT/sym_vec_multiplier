@@ -1,4 +1,10 @@
-#pragma once
+#ifndef LV_H
+#define LV_H
+
+
+
+
+
 #include "PrimitiveTypes2.h"
 #include <unordered_set>
 #include <string>
@@ -14,3 +20,4 @@ public:
 	std::unordered_map<std::wstring, std::unique_ptr<Unit>> m_lv;
 };
 
+#endif // LV_H

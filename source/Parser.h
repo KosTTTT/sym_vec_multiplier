@@ -1,4 +1,6 @@
-#pragma once
+#ifndef PARSE_H
+#define PARSE_H
+
 #include "Local_vars.h"
 #include "PrimitiveTypes2.h"
 #include <string>
@@ -26,3 +28,4 @@ namespace
 	bool cvnwd(std::wstring const& str);
 	//void throwTheVariableWasDefinedError(std::wstring const & str);
 }
+#endif // PARSE_H

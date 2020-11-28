@@ -1,7 +1,8 @@
-#pragma once
+#ifndef SETTINGS_H
+#define SETTINGS_H
 
 #include <type_traits>
-#include < cstdint >
+#include <cstdint>
 #include <memory>
 namespace Settings
 {
@@ -33,3 +34,4 @@ static void cuptr(std::unique_ptr<T>& destinaton, std::unique_ptr<T> const& sour
 		destinaton.reset(nullptr);
 }
 
+#endif // SETTINGS_H

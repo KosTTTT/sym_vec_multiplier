@@ -1,4 +1,6 @@
-#pragma once
+#ifndef PT_H
+#define PT_H
+
 #include <string>
 #include <vector>
 #include <iostream>
@@ -88,3 +90,7 @@ public:
 //{
 //	return arg += 1;
 //}
+
+
+
+#endif // PT_H

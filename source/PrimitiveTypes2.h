@@ -1,4 +1,5 @@
-#pragma once
+#ifndef PT2_H
+#define PT2_H
 #include "PrimitiveTypes.h"
 #include <memory>
 #include <utility>
@@ -367,4 +368,4 @@ private:
 
 std::wostream& operator<<(std::wostream& out, Unit const& u);
 
-
+#endif // PT2_H
