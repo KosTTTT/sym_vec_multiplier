@@ -9,6 +9,8 @@
 #include <unordered_set>
 #include <string>
 #include <unordered_map>
+
+
 class Local_vars
 {
 public:
@@ -16,7 +18,7 @@ public:
 	std::unordered_set<std::wstring> m_vs;
 	/*! User defined symbols for scalars*/
 	std::unordered_set<std::wstring> m_ss;
-	/*! Locally user defined variables*/
+    /*! User defined variables containing expressions*/
 	std::unordered_map<std::wstring, std::unique_ptr<Unit>> m_lv;
 };
 

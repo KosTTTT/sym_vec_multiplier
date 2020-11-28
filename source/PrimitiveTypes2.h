@@ -4,7 +4,6 @@
 #include <memory>
 #include <utility>
 #include <algorithm>
-//#include <queue>
 #include <list>
 #include "Settings.h"
 #include <initializer_list>
@@ -12,8 +11,6 @@
 
 
 
-extern template class std::vector<Vecdotted>;
-extern template class std::vector<Scalar>;
 
 /*! Scalars multiplied together. It might be a single scalar also.*/
 class ScalarGroup

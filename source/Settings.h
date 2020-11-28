@@ -2,31 +2,27 @@
 #define SETTINGS_H
 
 #include <type_traits>
+#include <limits>
 #include <cstdint>
 #include <memory>
 namespace Settings
 {
-	/*type for presize calculations*/
-	using type_real = int64_t;
+    /*type for scalar multiplier*/
+    using type_real = long double;
 
 	template <typename T = type_real>
-	T tolerance_init()
+    constexpr T tolerance_init()
 	{
-		if constexpr (std::is_same_v<T, double>)
-			return T(0.0000000000000001);
-		else if  constexpr (std::is_same_v<T, long double>)
-			return T(0.000000000000000000000000001l);
-		else if  constexpr (std::is_same_v<float, T>)
-			return T(0.0000001f);
-		else
+        if constexpr (std::numeric_limits<T>::is_integer)
 			return T(1);
-			//static_assert(false, "wrong data type for type_real");
+        else
+            return std::numeric_limits<T>::epsilon();
 	}
-	extern type_real tolerance;
+    extern type_real scalar_tol;
 }
 /*copy unique_ptr*/
 template<typename T>
-static void cuptr(std::unique_ptr<T>& destinaton, std::unique_ptr<T> const& sourse)
+inline static void cuptr(std::unique_ptr<T>& destinaton, std::unique_ptr<T> const& sourse)
 {
 	if (sourse)
 		destinaton.reset(new T(*sourse));

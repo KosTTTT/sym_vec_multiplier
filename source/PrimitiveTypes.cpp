@@ -40,7 +40,7 @@ inline bool Scalar::operator==(Scalar const& other) const
 {
 	return (static_cast<Symbol const&>(*this) == other) && (m_power == other.m_power);
 }
-bool Scalar::operator !=(Scalar const& other)const
+inline bool Scalar::operator !=(Scalar const& other)const
 {
 	return !(*this == other);
 }
@@ -59,7 +59,7 @@ bool Vecdotted::operator == (Vecdotted const& other) const
 	}
 	return false;
 }
-bool Vecdotted::operator != (Vecdotted const& other) const
+inline bool Vecdotted::operator != (Vecdotted const& other) const
 {
 	return !(*this==other);
 }
@@ -69,17 +69,17 @@ std::wostream& operator<<(std::wostream& out, Symbol const& u)
 }
 std::wostream& operator<<(std::wostream& out, Vec const& u)
 {
-	 return out << std::wstring{ L"_" } << u.m_sym;
+     return out << '_' << static_cast<Symbol const&>(u);
 }
 std::wostream& operator<<(std::wostream& out, Vecdotted const& u)
 {
-	return out << u.m_v1 << std::wstring{ L"dot" } << u.m_v2;
+    return out << u.m_v1 << "dot" << u.m_v2;
 }
 std::wostream& operator<<(std::wostream& out, Scalar const& u)
 {
-	out << u.m_sym;
-	//if the power of scalar equals 1 do not print the power. User will assume it is 1
-	if (abs(static_cast<Settings::type_real>(u.m_power) - 1) < Settings::tolerance)
-		return out;
-	return out<< std::wstring{ L"^" } << u.m_power;
+    out << static_cast<Symbol const&>(u);
+    //if the power of scalar equals 1 do not print it. User will assume it is 1
+    if (u.m_power > 1)
+        out<<'^'<< u.m_power;
+    return out;
 }

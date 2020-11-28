@@ -4,10 +4,9 @@
 #include <string>
 #include <vector>
 #include <iostream>
-//#include "TemplatesH.h"
 
 
-
+/*! Holds symbolic name of a variable*/
 class Symbol
 {
 	friend std::wostream& operator<<(std::wostream& out, Symbol const& u);
@@ -22,7 +21,7 @@ public:
 	explicit  Symbol(std::wstring&& str) :
 		m_sym(std::move(str))
 	{}
-	/*! Holds symbolic name of a variable*/
+
 	std::wstring m_sym;
 	bool operator==(Symbol const & other) const;
 	bool operator !=(Symbol const& other)const;
@@ -36,7 +35,7 @@ public:
 	using Symbol::Symbol;
 };
 
-/*! Holding a symbol name for a sclar variable*/
+/*! Holding a symbol name for a scalar variable*/
 class Scalar :public Symbol
 {
 	friend std::wostream& operator<<(std::wostream& out, Scalar const& u);
@@ -45,7 +44,7 @@ public:
 	explicit Scalar(wchar_t const * str, unsigned power=1);
 	explicit Scalar(std::wstring const& str, unsigned power = 1);
 	explicit Scalar(std::wstring && str, unsigned power = 1);
-	/*! The power of a scalar variable. E.g. t^2*/
+    /*! The power of a scalar variable. E.g. t^2. So far must be > 0*/
 	unsigned m_power=1;
 	bool operator == (Scalar const& other) const ;
 	bool operator != (Scalar const& other) const ;
@@ -75,21 +74,6 @@ public:
 	bool operator == (Vecdotted const& other) const;
 	bool operator != (Vecdotted const& other) const;
 };
-
-
-
-//template<typename T>
-//T functestt(T var)
-//{
-//	var += 1;
-//	return var;
-//}
-//
-//template <typename T>
-//T functest02(typename Identity<T>::type arg)
-//{
-//	return arg += 1;
-//}
 
 
 
