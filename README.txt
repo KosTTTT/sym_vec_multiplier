@@ -5,7 +5,6 @@ To run this program.
 In the file one may write.
 
 #example 1
-
 #define symbolic scalar variables
 syms a,b
 ytmp = a+b
