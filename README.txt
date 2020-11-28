@@ -1,8 +1,7 @@
-This program opens parentheses in a symbolic expression where each symbol is a vector or a scalar.
+This program opens parentheses in a symbolic expression where each symbol is a vector or a scalar. Only addition, subtraction and multiplication are supported.
 
-To run this program.
-1) Create an input file. And specify its name as an input to a program
-In the file one may write.
+To use this program create an ASCII file in the same directory as the program and specify its name as an input to a it.
+The following are examples of an ASCII file.
 
 #example 1
 #define symbolic scalar variables
