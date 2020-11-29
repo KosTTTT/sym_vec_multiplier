@@ -5,6 +5,10 @@
 #include <limits>
 #include <cstdint>
 #include <memory>
+
+
+
+
 namespace Settings
 {
     /*type for scalar multiplier*/
@@ -18,7 +22,7 @@ namespace Settings
         else
             return std::numeric_limits<T>::epsilon();
 	}
-    extern type_real scalar_tol;
+    inline type_real const scalar_tol=tolerance_init();
 }
 /*copy unique_ptr*/
 template<typename T>

@@ -7,7 +7,7 @@ namespace Settings
 {
 
 
-    constexpr type_real tolerance = tolerance_init();
+    //constexpr type_real tolerance = tolerance_init();
 }
 
 
