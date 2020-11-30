@@ -6,82 +6,74 @@ using namespace std;
 
 
 
-	//template<typename Container, typename T>
-	//void hfadd(Container& c, T&& value)
-	//{
-	//	auto const cend = c.end();
-	//	decltype(c.end()) it_f;
 
+void ScalarGroup::MultByScalar(Scalar const sc)
+{
+    //auto it_end = m_arrScalar.end();
+    for(size_t i = 0, end = m_arrScalar.size(); i < end; ++i)
+    {
+        if(sc.m_sym==m_arrScalar[i].m_sym)
+        {
+            m_arrScalar[i].multiply(sc);
+            return;//++
+        }
+    }
+    m_arrScalar.push_back(sc);
+}
 
-	//	if constexpr (std::is_same_v<std::decay_t<T>, Scalar>)
-	//	{
-	//		it_f= std::find_if(c.begin(), cend,
-	//			[&value](T const& next)->bool
-	//			{
-	//				return value.m_sym == next.m_sym;
-	//			});
-	//	}
-	//	else if constexpr (std::is_same_v<std::decay_t<T>, Vecdotted>)
-	//	{
-	//		it_f = std::find(c.begin(), cend, value);
-	//	}
-	//	else
-	//	{
-	//		static_assert(false, "error in hfadd. Wrong data type.");
-	//	}
-	//	if (it_f != cend)
-	//	{
-	//		*it_f = value;
-	//	}
-	//	else
-	//		c.emplace_back(std::forward<T>(value));
-	//}
-
-ScalarGroup& ScalarGroup::multiply(std::unique_ptr<ScalarGroup> const& sg)
+ScalarGroup& ScalarGroup::multiply(ScalarGroup const& sg)
 {
 	//multiply them together
 
-	if (sg)
-	{
 
-		m_multiple *= sg->m_multiple;
-		if (isZero())
-		{
-			m_arrScalar.clear();
-			m_arrVecdotted.clear();
-			return *this;
-		}
+    if(isOne())
+    {
+        *this = sg;
+    }
+    else if(isMinusOne())
+    {
+        *this = sg;
+        m_multiple = -m_multiple;
+    }
+    else if(sg.isZero())
+    {
+        setZero();
+    }
+    else if(sg.isMinusOne())
+    {
+        m_multiple = -m_multiple;
+    }
+    else if(!sg.isOne() && !isZero())
+    {
+        m_multiple *= sg.m_multiple;
 
-		auto const size_acother = sg->m_arrScalar.size();
-		auto const size_avother = sg->m_arrVecdotted.size();
-		m_arrScalar.reserve(m_arrScalar.size() + size_acother);
-		m_arrVecdotted.reserve(m_arrVecdotted.size() + size_avother);
-		//for common Scalar variables increase their extent
-		//and for new ones move them from sg to this
+        auto const size_acother = sg.m_arrScalar.size();
+        auto const size_avother = sg.m_arrVecdotted.size();
+        m_arrScalar.reserve(m_arrScalar.size() + size_acother);
+        m_arrVecdotted.reserve(m_arrVecdotted.size() + size_avother);
+        //for common Scalar variables increase their extent
+        //and for new ones move them from sg to this
 
-		for (decltype(sg->m_arrScalar.size())i = 0; i < size_acother; ++i)
-		{
-			auto & scnext = sg->m_arrScalar[i];
-			auto const it_found = std::find_if(m_arrScalar.begin(), m_arrScalar.end(), 
-				[&scnext](Scalar const& next)->bool
-				{
-					return scnext.m_sym==next.m_sym;
-				});
-			if (it_found != m_arrScalar.end())
-			{
-				//found the same symbol variable
-				//increase its power
-				(*it_found).m_power+=scnext.m_power;
-				continue;
-			}
-			else
-				m_arrScalar.push_back(scnext);
-		}
-		for (decltype(sg->m_arrVecdotted.size())i = 0; i < size_avother; ++i)
-		{
-			m_arrVecdotted.push_back(sg->m_arrVecdotted[i]);
-		}
-	}
+        for (size_t i = 0; i < size_acother; ++i)
+        {
+            Scalar const & scnext = sg.m_arrScalar[i];
+            auto end1 = m_arrScalar.end();
+            auto it_found = std::find_if(m_arrScalar.begin(), end1,
+                [&scnext](Scalar const& next)->bool
+                {
+                    return scnext.m_sym==next.m_sym;
+                });
+            if (it_found == end1)
+                m_arrScalar.push_back(scnext);
+            else//found the same symbol variable
+                (*it_found).multiply(scnext);
+
+        }
+        for (size_t i = 0; i < size_avother; ++i)
+        {
+            m_arrVecdotted.push_back(sg.m_arrVecdotted[i]);
+        }
+    }
 	return *this;
 }
 inline void ScalarGroup::setZero()
@@ -90,84 +82,65 @@ inline void ScalarGroup::setZero()
 	m_arrScalar.clear();
 	m_arrVecdotted.clear();
 }
-bool ScalarGroup::canBeAdded(std::unique_ptr<ScalarGroup>const& other) const
+static bool hf(std::vector<Scalar> const& arthis, std::vector<Scalar> const& arother)
 {
+    auto const sc_size = arother.size();
+    //размеры должны совпадать
+    if (sc_size != arthis.size())
+        return false;
+    auto const m_arrScalar_end = arthis.end();
+    for (size_t i = 0; i < sc_size; ++i)
+    {
+        //if symbol is not found we cannot add them
+        auto it_found = std::find(arthis.begin(), m_arrScalar_end, arother[i]);
+        if (it_found == m_arrScalar_end)
+            return false;//--
+    }
+    return true;//++
+};
+static bool hf2(std::vector<Vecdotted> const& arthis, std::vector<Vecdotted> const& arother)
+{
+    auto const sc_size = arother.size();
+    //размеры должны совпадать
+    if (sc_size != arthis.size())
+        return false;
+    for (size_t i = 0; i < sc_size; ++i)
+    {
+        //check if the number of symbol occurrence is the same
+        if (std::count(arthis.begin(), arthis.end(), arother[i])
+            != std::count(arother.begin(), arother.end(), arother[i]))
+        {
+            return false;//--
+        }
+    }
+    return true;//++
+};
+bool ScalarGroup::canBeAdded(ScalarGroup const& other) const
+{
+    if(isZero() || other.isZero())
+        return true;//++
+
 	//if symbolic variables are the same in any order than two ScalarGroups can be added
 
-	auto hf = [&](auto const& arthis, auto const& arother)->bool
-	{
-		if constexpr (!std::is_same_v < std::decay_t<decltype(arthis.front())>, std::decay_t<decltype(arother.front())>>)
-		{
-			static_assert(false, "compile error is here");
-		}
-
-		auto const sc_size = arother.size();
-
-		//размеры должны совпадать
-		if (sc_size != arthis.size())
-		{
-			return false;
-		}
-
-		auto const m_arrScalar_end = arthis.end();
-		for (decltype(arother.size())i = 0; i < sc_size; ++i)
-		{
-			if constexpr (std::is_same_v<std::decay_t<decltype(arthis.front())>, Vecdotted>)
-			{
-				//check if the number of symbol occurrence is the same
-
-				Vecdotted const& vother = arother[i];
-
-				if (std::count(arthis.begin(), arthis.end(), vother) 
-					!= std::count(arother.begin(), arother.end(), vother))
-					return false;//--error
-			}
-			else if constexpr (std::is_same_v<std::decay_t<decltype(arthis.front())>, Scalar>)
-			{
-				//if symbol is not found we cannot add them
-
-				auto it_found = std::find(arthis.begin(), m_arrScalar_end, arother[i]);
-				if (it_found == m_arrScalar_end)
-					return false;
-			}
-			else
-			{
-				static_assert(false, " compile eror is here");
-			}
-		}
-		return true;
-	};
-	if (other)
-	{
-		if (isZero() || other->isZero())// if multiple is zero
-			return true;
-
-		return hf(m_arrScalar, other->m_arrScalar) && hf(m_arrVecdotted, other->m_arrVecdotted);
-	}
-	return false;
+    return hf(m_arrScalar, other.m_arrScalar) && hf2(m_arrVecdotted, other.m_arrVecdotted);
 }
-ScalarGroup& ScalarGroup::add(std::unique_ptr<ScalarGroup>& sg)
+ScalarGroup& ScalarGroup::add(ScalarGroup const& sg)
 {
-	if (sg)
-	{
-		if (isZero())
-		{
-			*this = std::move(*sg);
-		}
-		else if (!sg->isZero())
-		{
-			m_multiple += sg->m_multiple;
-			if (isZero())
-			{
-				m_arrScalar.clear();
-				m_arrVecdotted.clear();
-			}
-		}
-		sg.reset(nullptr);
-	}
+    if (isZero())
+    {
+        *this = sg;
+    }
+    else if (!sg.isZero())
+    {
+        m_multiple += sg.m_multiple;
+        if (isZero())
+        {
+            setZero();
+        }
+    }
 	return *this;
 }
-void ScalarGroup::addMultipe(Settings::type_real m)
+void ScalarGroup::AssignMultipe(Settings::type_real m)
 {
 	m_multiple = m;
 }

@@ -1,9 +1,7 @@
 #include "Parser.h"
 int main(int    argc, char** argv)
 {
-#ifdef DEBUG_BUILD
-    int k = 0;
-#endif
+    static_assert (Settings::scalar_tol==1);
     if(argc==2)
     	handle_input(argv[1]);
 

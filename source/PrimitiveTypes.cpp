@@ -44,7 +44,11 @@ inline bool Scalar::operator !=(Scalar const& other)const
 {
 	return !(*this == other);
 }
-
+inline Scalar & Scalar::multiply(Scalar const & other)
+{
+    m_power+=other.m_power;
+    return *this;
+}
 
 
 bool Vecdotted::operator == (Vecdotted const& other) const

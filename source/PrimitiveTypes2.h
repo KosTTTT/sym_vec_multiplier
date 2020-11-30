@@ -8,6 +8,7 @@
 #include "Settings.h"
 #include <initializer_list>
 #include <iostream>
+#include <cmath>
 
 
 
@@ -17,6 +18,14 @@ class ScalarGroup
 {
 	friend class Unit;
 		friend std::wostream& operator<<(std::wostream& out, ScalarGroup const& u);
+
+        /*! A number that is multiplied by this ScalarGroup. Default is 1*/
+        Settings::type_real m_multiple = 1;
+        /*! Array of scalar multiples*/
+        std::vector<Scalar> m_arrScalar;
+        /*! Array of dot products of vectors*/
+        std::vector<Vecdotted> m_arrVecdotted;
+
 public:
 	ScalarGroup() {}
 	explicit ScalarGroup(Settings::type_real multiple) :
@@ -25,15 +34,16 @@ public:
 	Multiplies ScalarGroup sg with this. 
 	@return A reference to this new Scalargroup
 	*/
-	ScalarGroup& multiply(std::unique_ptr<ScalarGroup> const& sg);
+    ScalarGroup& multiply(ScalarGroup const& sg);
 	/*! Return true if two ScalarGroups can be added together.*/
-	bool canBeAdded(std::unique_ptr<ScalarGroup>const & other) const;
+    bool canBeAdded(ScalarGroup const & other) const;
 	/*!
-	Adds ScalarGroup sg with this. The other ScalarGroup will vanish.
-	Befor using this function bool canBeAdded(ScalarGroup const & other) const should be used
+    Adds ScalarGroup sg with this..
+    Befor using this function bool canBeAdded(ScalarGroup const & other) const must be used
 	@return A reference to this new Scalargroup
 	*/
-	ScalarGroup& add(std::unique_ptr<ScalarGroup>& sg);
+    ScalarGroup& add(ScalarGroup const & sg);
+    /*! Set to zero and clears data members*/
 	void setZero();
 	inline Settings::type_real multiple() const
 	{
@@ -41,7 +51,7 @@ public:
 	}
 	inline bool isZero() const
 	{
-		return abs(m_multiple) < Settings::tolerance;
+        return std::abs(m_multiple) < Settings::scalar_tol;
 	}
 	inline std::vector<Scalar> const& arrScalar() const
 	{
@@ -51,76 +61,28 @@ public:
 	{
 		return m_arrVecdotted;
 	}
-	/*! Assign a multiple, replacing existend value*/
-	void addMultipe(Settings::type_real m);
-	/*! Append a scalar value to the array of Scalars or replaces it if the same symbol found*/
-	template<typename ...Params>
-	void addScalar(Params&& ...sc)
+    /*! Assign a multiple, replacing existing value*/
+    void AssignMultipe(Settings::type_real m);
+    /*! Multiply by a Scalar*/
+    void MultByScalar(Scalar const sc);
+    /*! Append a dot product of two vectors.*/
+    inline void MultByVecdotted(Vecdotted const & vd)
 	{
-		hfadd(m_arrScalar, Scalar( std::forward<Params>(sc)... ));
+        m_arrVecdotted.push_back(vd);
 	}
-	/*! Append a dot product of two vectors towards VecDotted array or replaces the same element*/
-	template<typename ...Params>
-	void addVecdotted(Params&& ...vd)
-	{
-		hfadd(m_arrVecdotted, Vecdotted(std::forward<Params>(vd)...));
-	}
-	/*! Returns true if there is only one multiple 1 in the class*/
+    /*! Returns true if ScalarGroup equals 1*/
 	inline bool isOne() const
 	{
-		return m_arrScalar.empty() && m_arrVecdotted.empty() && abs(m_multiple-1) < Settings::tolerance;
+        return m_arrScalar.empty() && m_arrVecdotted.empty() && std::abs(m_multiple-1) < Settings::scalar_tol;
 	}
 	inline bool isMinusOne() const
 	{
-		return m_arrScalar.empty() && m_arrVecdotted.empty() && abs(m_multiple +1)< Settings::tolerance;
+        return m_arrScalar.empty() && m_arrVecdotted.empty() && std::abs(m_multiple +1)< Settings::scalar_tol;
 	}
-private:
-	template<typename Container, typename T>
-	void hfadd(Container& c, T&& value)
-	{
-		auto const cend = c.end();
-		decltype(c.end()) it_f;
-
-
-		if constexpr (std::is_same_v<std::decay_t<T>, Scalar>)
-		{
-			it_f = std::find_if(c.begin(), cend,
-				[&value](T const& next)->bool
-				{
-					return value.m_sym == next.m_sym;
-				});
-		}
-		else if constexpr (std::is_same_v<std::decay_t<T>, Vecdotted>)
-		{
-			it_f = std::find(c.begin(), cend, value);
-		}
-		else
-		{
-			static_assert(false, "error in hfadd. Wrong data type.");
-		}
-		if (it_f != cend)
-		{
-			*it_f = value;
-		}
-		else
-			c.emplace_back(std::forward<T>(value));
-	}
-
-	/*! A number like -1, 3, 7 etc. Default is 1*/
-	Settings::type_real m_multiple = 1;
-	/*! Array of scalar multiples*/
-	std::vector<Scalar> m_arrScalar;
-	/*! Array of scalar dot products of vectors*/
-	std::vector<Vecdotted> m_arrVecdotted;
 };
 
-/*! Class represents a collection of multiples and terms, e.g. a*b*(5*r + 3)*(1+7*a) + a*r
-Here a*b*(5*r + 3)*(1+7*a) is the first term, a*r is the second one.
-Here a*b is represented by ScalarGroup class
-(5*r + 3) - First element of a list of queue of units
-(1+7*a) - Second element of a list of queue of units, where
-1-first element of the stack which is also represented by class Unit,
-7*a - second element of the stack
+/*! Class can represent a whole expression, e.g. a*b*(5*r + 3)*(1+7*a) + a*r
+Here a*b*(5*r + 3)*(1+7*a) is the first Unit, a*r is the second one of a list of Units.
 */
 class Unit
 {

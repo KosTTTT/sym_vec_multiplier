@@ -48,6 +48,9 @@ public:
 	unsigned m_power=1;
 	bool operator == (Scalar const& other) const ;
 	bool operator != (Scalar const& other) const ;
+    /*! Multiply this scalar by other.
+    @return reference to this new value. Must not be called if this->m_sym!=other.m_sym*/
+    Scalar & multiply(Scalar const & other);
 };
 
 
