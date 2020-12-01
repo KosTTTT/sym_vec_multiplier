@@ -34,7 +34,7 @@ Scalar::Scalar(std::wstring const& str, unsigned power):
 {
 
 }
-Scalar::Scalar(std::wstring && str, unsigned power) :
+Scalar::Scalar(std::wstring && str, unsigned power) noexcept:
 	Symbol(std::move(str)),
 	m_power(power)
 {

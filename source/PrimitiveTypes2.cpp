@@ -5,9 +5,23 @@
 using namespace std;
 
 
+void Unit::Multiple::copy_arrunitsh(std::list<  sum_queue   >  const& input, std::list<  sum_queue   > & output)
+{
+    for(auto const & sum: input)
+    {
+        sum_queue s;
+        for(auto const & u: sum)
+        {
+            if(u)
+                s.emplace_back(new Unit(*u));
+        }
+        if (s.empty())
+            continue;
+        output.emplace_back(std::move(s));
+    }
+}
 
-
-void ScalarGroup::MultByScalar(Scalar const sc)
+void ScalarGroup::MultByScalar(Scalar const& sc)
 {
     //auto it_end = m_arrScalar.end();
     for(size_t i = 0, end = m_arrScalar.size(); i < end; ++i)
@@ -75,7 +89,7 @@ ScalarGroup& ScalarGroup::multiply(ScalarGroup const& sg)
     }
 	return *this;
 }
-inline void ScalarGroup::setZero()
+inline void ScalarGroup::setZero() noexcept
 {
 	m_multiple = 0;
 	m_arrScalar.clear();
@@ -359,13 +373,13 @@ Unit::sum_queue Unit::moveMultipleq()
 	return sm;
 }
 
-inline bool Unit::Multiple::isOne() const
+inline bool Unit::Multiple::isOne() const noexcept
 {
-	return m_arrUnits.empty() && !m_vec && m_sg->isOne();
+    return m_arrUnits.empty() && !m_vec && m_sg && m_sg->isOne();
 }
-inline bool Unit::Multiple::isMinusOne() const
+inline bool Unit::Multiple::isMinusOne() const noexcept
 {
-	return m_arrUnits.empty() && !m_vec && m_sg->isMinusOne();
+    return m_arrUnits.empty() && !m_vec && m_sg && m_sg->isMinusOne();
 }
 //--
 Unit::sum_queue Unit::expand_move(std::unique_ptr<Unit>& UnitChild)
@@ -637,19 +651,31 @@ void Unit::multiply(std::unique_ptr<Unit>const& u)
 		return;//++
 	}
 }
-bool Unit::Multiple::canbeadded(Multiple const& mthis, Multiple const& mother)
+bool Unit::Multiple::canbeadded(Multiple const& mother) const
 {
-	bool vbool = !mthis.m_vec && !mother.m_vec;
-	if (!vbool)
+    bool b = !m_vec && !mother.m_vec;
+    if (!b)
 	{
-		if (mthis.m_vec && mother.m_vec)
+        if (m_vec && mother.m_vec)
 		{
-			vbool = *mthis.m_vec == *mother.m_vec;
+            b = *m_vec == *mother.m_vec;
 		}
 	}
-	if (vbool && mthis.m_sg->canBeAdded(mother.m_sg))
+
+    if (b)
 	{
-		return true;
+        if(m_arrUnits.empty() && mother.m_arrUnits.empty())
+        {
+            b = !m_sg && !mother.m_sg;
+            if(!b)
+            {
+                if(m_sg && mother.m_sg)
+                {
+                    b = m_sg->canBeAdded(*mother.m_sg);
+                }
+            }
+            return b;
+        }
 	}
 	return false;
 }
@@ -684,18 +710,37 @@ void Unit::hm(Unit& empty, Unit& notempty)
 
 void Unit::Multiple::multiply(Multiple const & other)
 {
-	if (m_vec && other.m_vec)
+    if(isZero())
+        return;
+
+    if(other.isZero())
+    {
+        setZero();
+        return;
+    }
+
+    if(m_vec && other.m_vec)
 	{
-		unique_ptr<ScalarGroup> s(new ScalarGroup);
-		s->addVecdotted(*m_vec, *other.m_vec);
-		m_sg->multiply(s);
-		m_vec.reset(nullptr);
+        if(!m_sg)
+            m_sg = std::make_optional<ScalarGroup>();
+        m_sg->MultByVecdotted(m_vec, other.m_vec);
+        m_vec.reset();
 	}
 	else if (!m_vec && other.m_vec)
 	{
-		m_vec.reset(new Vec(*other.m_vec));
+        m_vec.emplace(*other.m_vec);
 	}
-	m_sg->multiply(other.m_sg);
+
+    copy_arrunitsh(other.m_arrUnits,m_arrUnits);
+
+    if(other.m_sg && m_sg)
+    {
+        m_sg->multiply(*other.m_sg);
+    }
+    else if(!m_sg && other.m_sg)
+    {
+        m_sg.emplace(*other.m_sg);
+    }
 }
 
 Unit::Multiple::Multiple(Multiple const& other):
@@ -721,21 +766,24 @@ Unit::Multiple& Unit::Multiple::operator=(Multiple&& other) noexcept
     swap(other);
     return *this;
 }
+bool Unit::Multiple::isZero() const noexcept
+{
+    if(m_arrUnits.empty() && !m_sg && !m_vec)
+        return true;
+    if(m_sg && m_sg->isZero())
+        return true;
+    return false;
+}
+void Unit::Multiple::setZero() noexcept
+{
+    m_arrUnits.clear();
+    m_sg.reset();
+    m_vec.reset();
+}
 void Unit::Multiple::copy_arrunits(std::list<  sum_queue   >  const& other)
 {
 	m_arrUnits.clear();
-    for(auto const & sum: other)
-    {
-        sum_queue s;
-        for(auto const & u: sum)
-        {
-            if(u)
-                s.emplace_back(new Unit(*u));
-        }
-        if (s.empty())
-            continue;
-        m_arrUnits.emplace_back(std::move(s));
-    }
+    copy_arrunitsh(other,m_arrUnits);
 }
 template<typename T>
 static void swapo(std::optional<T> & f, std::optional<T> & s)
@@ -764,8 +812,8 @@ void Unit::Multiple::swap(Multiple & other) noexcept
 void Unit::Multiple::setOne()
 {
 	m_arrUnits.clear();
-	m_vec.reset(nullptr);
-	m_sg.reset(new ScalarGroup(1));
+    m_vec.reset();
+    m_sg.emplace(1);
 }
 
 Unit::Unit(Unit const& other) :

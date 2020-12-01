@@ -45,38 +45,40 @@ public:
 	*/
     ScalarGroup& add(ScalarGroup const & sg);
     /*! Set to zero and clears data members*/
-	void setZero();
-	inline Settings::type_real multiple() const
+    void setZero() noexcept;
+    inline Settings::type_real multiple() const noexcept
 	{
 		return m_multiple;
 	}
-	inline bool isZero() const
+    inline bool isZero() const noexcept
 	{
         return std::abs(m_multiple) < Settings::scalar_tol;
 	}
-	inline std::vector<Scalar> const& arrScalar() const
+    inline std::vector<Scalar> const& arrScalar() const noexcept
 	{
 		return m_arrScalar;
 	}
-	inline std::vector<Vecdotted> const& arrVecDotted() const
+    inline std::vector<Vecdotted> const& arrVecDotted() const noexcept
 	{
 		return m_arrVecdotted;
 	}
     /*! Assign a multiple, replacing existing value*/
     void AssignMultipe(Settings::type_real m);
     /*! Multiply by a Scalar*/
-    void MultByScalar(Scalar const sc);
+    void MultByScalar(Scalar const & sc);
     /*! Append a dot product of two vectors.*/
-    inline void MultByVecdotted(Vecdotted const & vd)
+
+    template<typename ...Params>
+    inline void MultByVecdotted(Params && ...params)
 	{
-        m_arrVecdotted.push_back(vd);
+        m_arrVecdotted.emplace_back(std::forward<Params>(params)...);
 	}
     /*! Returns true if ScalarGroup equals 1*/
-	inline bool isOne() const
+    inline bool isOne() const noexcept
 	{
         return m_arrScalar.empty() && m_arrVecdotted.empty() && std::abs(m_multiple-1) < Settings::scalar_tol;
 	}
-	inline bool isMinusOne() const
+    inline bool isMinusOne() const noexcept
 	{
         return m_arrScalar.empty() && m_arrVecdotted.empty() && std::abs(m_multiple +1)< Settings::scalar_tol;
 	}
@@ -95,10 +97,6 @@ private:
     class Multiple
     {
     public:
-
-
-        //==============================================data members
-
         std::optional<ScalarGroup> m_sg;//scalar multiple
         std::optional<Vec> m_vec;//vector multiple
 
@@ -123,31 +121,24 @@ private:
         Multiple(Multiple&& other) noexcept;
         Multiple& operator=(Multiple&& other) noexcept;
         /*returns true is this multiple is zero. So everything that multiplies on it will be zero*/
-        inline bool isZero() const
-        {
-            return m_sg->isZero();
-        }
-        inline void setZero()
-        {
-            m_sg->setZero();
-            m_arrUnits.clear();
-            m_vec.reset(nullptr);
-        }
+        bool isZero() const noexcept;
+        void setZero() noexcept;
         /*returns true if multiple is one*/
-        bool isOne() const;
-        bool isMinusOne() const;
+        bool isOne() const noexcept;
+        bool isMinusOne() const noexcept;
 
         /*sets this multiple to one*/
         void setOne();
-        /* Returns true if two Multiples can be added together
-        Use m_sg->add to add them
+        /*!
+         * Returns true if two Multiples can be added together
         */
-        static bool canbeadded(Multiple const& mthis, Multiple const& mother);
+        bool canbeadded(Multiple const& mother) const;
         /*multiplies other to this*/
         void multiply(Multiple const& other);
         void swap(Multiple & other) noexcept;
-    private:
+
         void copy_arrunits(std::list<  sum_queue   >  const& other);
+        static void copy_arrunitsh(std::list<  sum_queue   >  const& input, std::list<  sum_queue   > & output);
 
     };
 
@@ -168,7 +159,7 @@ public:
 	Unit()
 	{}
 	Unit(Settings::type_real v) :
-		m_m(new Multiple(v))
+        m_m(v)
 	{}
 	Unit(Unit const& other);
 	Unit& operator=(Unit const & other);

@@ -18,7 +18,7 @@ public:
 	explicit  Symbol(std::wstring const& str) :
 		m_sym(str)
 	{}
-	explicit  Symbol(std::wstring&& str) :
+    explicit  Symbol(std::wstring&& str) noexcept:
 		m_sym(std::move(str))
 	{}
 
@@ -44,7 +44,7 @@ public:
 	Scalar();
 	explicit Scalar(wchar_t const * str, unsigned power=1);
 	explicit Scalar(std::wstring const& str, unsigned power = 1);
-	explicit Scalar(std::wstring && str, unsigned power = 1);
+    explicit Scalar(std::wstring && str, unsigned power = 1) noexcept;
     /*! The power of a scalar variable. E.g. t^2. So far must be > 0*/
 	unsigned m_power=1;
 	bool operator == (Scalar const& other) const ;
@@ -66,7 +66,7 @@ public:
 		m_v1(v1),
 		m_v2(v2)
 	{}
-    Vecdotted(Vec && v1, Vec && v2) :
+    Vecdotted(Vec && v1, Vec && v2) noexcept:
 		m_v1(std::move(v1)),
 		m_v2(std::move(v2))
 	{}
