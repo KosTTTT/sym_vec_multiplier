@@ -9,6 +9,7 @@
 #include <initializer_list>
 #include <iostream>
 #include <cmath>
+#include <optional>
 
 
 
@@ -79,73 +80,90 @@ public:
 	{
         return m_arrScalar.empty() && m_arrVecdotted.empty() && std::abs(m_multiple +1)< Settings::scalar_tol;
 	}
+    void swap(ScalarGroup & other) noexcept;
 };
 
-/*! Class can represent a whole expression, e.g. a*b*(5*r + 3)*(1+7*a) + a*r
-Here a*b*(5*r + 3)*(1+7*a) is the first Unit, a*r is the second one of a list of Units.
+/*! This class can represent a whole expression, e.g. 5*(a*b*(5*r + 3)*(1+7*a) + a*r)
 */
 class Unit
 {
+
 public:
-	using sum_queue = std::list<std::unique_ptr<Unit>>;
+    using sum_queue = std::list<std::unique_ptr<Unit>>;
 private:
-	/*multiple of the gobal sum of units */
-	class Multiple
-	{
-		friend std::wostream& operator<<(std::wostream& out, Unit const& u);
-	public:
-		Multiple() :
-			m_sg(new ScalarGroup())
-		{}
-		Multiple(Settings::type_real v) :
-			m_sg(new ScalarGroup(v))
-		{
-
-		}
-		Multiple(Multiple const& other);
-		Multiple& operator=(Multiple const& other);
-		Multiple(Multiple&& other) noexcept;
-		Multiple& operator=(Multiple&& other) noexcept;
-		/*returns true is this multiple is zero. So everything that multiplies on it will be zero*/
-		inline bool isZero() const
-		{
-			return m_sg->isZero();
-		}
-		inline void setZero()
-		{
-			m_sg->setZero();
-			m_arrUnits.clear();
-			m_vec.reset(nullptr);
-		}
-		/*returns true if multiple is one*/
-		bool isOne() const;
-		bool isMinusOne() const;
-
-		/*sets this multiple to one*/
-		void setOne();
-		/* Returns true if two Multiples can be added together
-		Use m_sg->add to add them
-		*/
-		static bool canbeadded(Multiple const& mthis, Multiple const& mother);
-		/*multiplies other to this*/
-		void multiply(Multiple const& other);
-	private:
-		void copy_arrunits(std::list<  sum_queue   >  const& other);
-	public:
+    /*multiple of the gobal sum of units */
+    class Multiple
+    {
+    public:
 
 
-		//==============================================data members
-		std::unique_ptr<ScalarGroup> m_sg;
-		std::unique_ptr<Vec> m_vec;
+        //==============================================data members
 
-		/*first queue elements are multiples and second ones are terms of the first
-		e.g. (5*a + r)*(3*u)
-		where (5*a + r) is the first element of the queue, which has queue containng 5*a and r
-		(3*u) is the second which has queue containing 3*u
-		*/
-		std::list<  sum_queue   > m_arrUnits;
-	};
-	friend std::wostream& operator<<(std::wostream& out, Unit const& u);
+        std::optional<ScalarGroup> m_sg;//scalar multiple
+        std::optional<Vec> m_vec;//vector multiple
+
+        /*
+        e.g. (5*a + r)*(3*u)
+        where (5*a + r) is the first element of the list
+        (3*u) is the second
+        */
+        std::list<  sum_queue   > m_arrUnits;
+
+        friend std::wostream& operator<<(std::wostream& out, Unit const& u);
+    public:
+        Multiple()
+        {}
+        Multiple(Settings::type_real v) :
+            m_sg(v)
+        {
+
+        }
+        Multiple(Multiple const& other);
+        Multiple& operator=(Multiple const& other);
+        Multiple(Multiple&& other) noexcept;
+        Multiple& operator=(Multiple&& other) noexcept;
+        /*returns true is this multiple is zero. So everything that multiplies on it will be zero*/
+        inline bool isZero() const
+        {
+            return m_sg->isZero();
+        }
+        inline void setZero()
+        {
+            m_sg->setZero();
+            m_arrUnits.clear();
+            m_vec.reset(nullptr);
+        }
+        /*returns true if multiple is one*/
+        bool isOne() const;
+        bool isMinusOne() const;
+
+        /*sets this multiple to one*/
+        void setOne();
+        /* Returns true if two Multiples can be added together
+        Use m_sg->add to add them
+        */
+        static bool canbeadded(Multiple const& mthis, Multiple const& mother);
+        /*multiplies other to this*/
+        void multiply(Multiple const& other);
+        void swap(Multiple & other) noexcept;
+    private:
+        void copy_arrunits(std::list<  sum_queue   >  const& other);
+
+    };
+
+    friend std::wostream& operator<<(std::wostream& out, Unit const& u);
+
+
+    /*Multiple of m_s*/
+    std::optional<Multiple> m_m;
+    /*Summ of Units inside this Unit*/
+    sum_queue m_s;
+    /*true if the unit is expanded, e.g. 2(a + 3) is not expanded but 2a + 6 is.*/
+    bool m_expanded = false;
+
+
+
+
 public:
 	Unit()
 	{}
@@ -245,7 +263,7 @@ public:
 			return true;
 		return false;
 	}
-
+    void swap(Unit & other) noexcept;
 
 private:
 	/*sets multiple of this object to zero and clears everything else*/
@@ -316,13 +334,7 @@ private:
 	//void mUtoM(std::unique_ptr<Unit> &unit);
 
 
-	/*Multiple of Global terms of units or just a term if there are no Global terms*/
-	std::unique_ptr<Multiple> m_m;
-	/*Global terms of units*/
-	sum_queue m_s;
-private:
-	/*true if the unit is expanded, e.g. 2(a + 3) is not expanded but 2a + 6 is.*/
-	bool m_expanded = false;
+
 };
 
 std::wostream& operator<<(std::wostream& out, Unit const& u);

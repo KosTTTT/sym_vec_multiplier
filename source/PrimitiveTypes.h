@@ -25,6 +25,7 @@ public:
 	std::wstring m_sym;
 	bool operator==(Symbol const & other) const;
 	bool operator !=(Symbol const& other)const;
+    void swap(Symbol & other) noexcept;
 };
 
 /*! Holding a symbol name for a vector variable*/
@@ -51,6 +52,7 @@ public:
     /*! Multiply this scalar by other.
     @return reference to this new value. Must not be called if this->m_sym!=other.m_sym*/
     Scalar & multiply(Scalar const & other);
+    void swap(Scalar & other) noexcept;
 };
 
 
@@ -60,15 +62,15 @@ class Vecdotted
 	friend std::wostream& operator<<(std::wostream& out, Vecdotted const& u);
 public:
 	Vecdotted() {}
-	explicit Vecdotted(Vec const & v1, Vec const & v2):
+    Vecdotted(Vec const & v1, Vec const & v2):
 		m_v1(v1),
 		m_v2(v2)
 	{}
-	explicit Vecdotted(Vec && v1, Vec && v2) :
+    Vecdotted(Vec && v1, Vec && v2) :
 		m_v1(std::move(v1)),
 		m_v2(std::move(v2))
 	{}
-	explicit Vecdotted(wchar_t const * v1, wchar_t const* v2) :
+    Vecdotted(wchar_t const * v1, wchar_t const* v2) :
 		m_v1(v1),
 		m_v2(v2)
 	{}
@@ -76,6 +78,7 @@ public:
 	Vec m_v2;
 	bool operator == (Vecdotted const& other) const;
 	bool operator != (Vecdotted const& other) const;
+    void swap(Vecdotted & other) noexcept;
 };
 
 

@@ -1,6 +1,6 @@
 #include "PrimitiveTypes.h"
 #include "Settings.h"
-
+#include <utility>
 Symbol::Symbol():
 	m_sym()
 {}
@@ -12,6 +12,10 @@ inline bool Symbol::operator == (Symbol const& other) const
 inline bool Symbol::operator != (Symbol const& other) const
 {
 	return !(*this == other);
+}
+void Symbol::swap(Symbol & other) noexcept
+{
+    m_sym.swap(other.m_sym);
 }
 Scalar::Scalar():
 	Symbol()
@@ -49,7 +53,11 @@ inline Scalar & Scalar::multiply(Scalar const & other)
     m_power+=other.m_power;
     return *this;
 }
-
+void Scalar::swap(Scalar & other) noexcept
+{
+    Symbol::swap(other);
+    std::swap(m_power, other.m_power);
+}
 
 bool Vecdotted::operator == (Vecdotted const& other) const
 {
@@ -62,6 +70,11 @@ bool Vecdotted::operator == (Vecdotted const& other) const
 		return m_v1 == other.m_v2;
 	}
 	return false;
+}
+void Vecdotted::swap(Vecdotted & other) noexcept
+{
+    m_v1.swap(other.m_v1);
+    m_v2.swap(other.m_v2);
 }
 inline bool Vecdotted::operator != (Vecdotted const& other) const
 {

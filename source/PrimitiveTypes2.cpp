@@ -67,7 +67,6 @@ ScalarGroup& ScalarGroup::multiply(ScalarGroup const& sg)
                 m_arrScalar.push_back(scnext);
             else//found the same symbol variable
                 (*it_found).multiply(scnext);
-
         }
         for (size_t i = 0; i < size_avother; ++i)
         {
@@ -140,11 +139,16 @@ ScalarGroup& ScalarGroup::add(ScalarGroup const& sg)
     }
 	return *this;
 }
-void ScalarGroup::AssignMultipe(Settings::type_real m)
+inline void ScalarGroup::AssignMultipe(Settings::type_real m)
 {
 	m_multiple = m;
 }
-
+void ScalarGroup::swap(ScalarGroup & other) noexcept
+{
+    std::swap(m_multiple, other.m_multiple);
+    m_arrScalar.swap(other.m_arrScalar);
+    m_arrVecdotted.swap(other.m_arrVecdotted);
+}
 //--
 void Unit::expand()
 {
@@ -694,18 +698,16 @@ void Unit::Multiple::multiply(Multiple const & other)
 	m_sg->multiply(other.m_sg);
 }
 
-Unit::Multiple::Multiple(Multiple const& other)
+Unit::Multiple::Multiple(Multiple const& other):
+    m_sg(other.m_sg),
+    m_vec(other.m_vec)
 {
-	cuptr(m_sg, other.m_sg);
-	cuptr(m_vec, other.m_vec);
 	copy_arrunits(other.m_arrUnits);
 }
 Unit::Multiple& Unit::Multiple::operator=(Multiple const& other)
 {
-	cuptr(m_sg, other.m_sg);
-	cuptr(m_vec, other.m_vec);
-	copy_arrunits(other.m_arrUnits);
-	return *this;
+    Multiple m(other);
+    return *this = std::move(m);
 }
 Unit::Multiple::Multiple(Multiple&& other)noexcept :
 	m_sg(std::move(other.m_sg)),
@@ -716,30 +718,49 @@ Unit::Multiple::Multiple(Multiple&& other)noexcept :
 }
 Unit::Multiple& Unit::Multiple::operator=(Multiple&& other) noexcept
 {
-	m_sg=std::move(other.m_sg);
-	m_vec = std::move(other.m_vec);
-	m_arrUnits = std::move(other.m_arrUnits);
-	return *this;
+    swap(other);
+    return *this;
 }
 void Unit::Multiple::copy_arrunits(std::list<  sum_queue   >  const& other)
 {
 	m_arrUnits.clear();
-	auto const itend1 = other.end();
-	for (auto itnext1 = other.begin(); itnext1 != itend1; ++itnext1)
-	{
-		sum_queue s;
-		auto const itend2 = (*itnext1).end();
-		for (auto itnext2 = (*itnext1).begin(); itnext2 != itend2; ++itnext2)
-		{
-			std::unique_ptr<Unit> const& UnitPtr = *itnext2;
-			s.emplace_back(std::make_unique<Unit>(*UnitPtr));
-		}
-		if (s.empty())
-			continue;
-		m_arrUnits.emplace_back(std::move(s));
-	}
+    for(auto const & sum: other)
+    {
+        sum_queue s;
+        for(auto const & u: sum)
+        {
+            if(u)
+                s.emplace_back(new Unit(*u));
+        }
+        if (s.empty())
+            continue;
+        m_arrUnits.emplace_back(std::move(s));
+    }
 }
-
+template<typename T>
+static void swapo(std::optional<T> & f, std::optional<T> & s)
+{
+    if(f && s)
+    {
+        f->swap(*(s));
+    }
+    else if(f &&!s)
+    {
+        s.emplace(*f);
+        f.reset();
+    }
+    else if(!f && s)
+    {
+        f.emplace(*s);
+        s.reset();
+    }
+}
+void Unit::Multiple::swap(Multiple & other) noexcept
+{
+    swapo(m_sg, other.m_sg);
+    swapo(m_vec, other.m_vec);
+    m_arrUnits.swap(other.m_arrUnits);
+}
 void Unit::Multiple::setOne()
 {
 	m_arrUnits.clear();
@@ -748,17 +769,15 @@ void Unit::Multiple::setOne()
 }
 
 Unit::Unit(Unit const& other) :
+    m_m(other.m_m),
 	m_expanded(other.m_expanded)
 {
-	cuptr(m_m, other.m_m);
 	m_s = copy_sum_queue(other.m_s);
 }
 Unit& Unit::operator=(Unit const& other)
 {
-	cuptr(m_m, other.m_m);
-	m_expanded = other.m_expanded;
-	m_s = copy_sum_queue(other.m_s);
-	return *this;
+    Unit u(other);
+    return *this = std::move(u);
 }
 Unit::Unit(Unit&& other) noexcept :
 	m_m(std::move(other.m_m)),
@@ -769,9 +788,7 @@ Unit::Unit(Unit&& other) noexcept :
 }
 Unit& Unit::operator=(Unit&& other) noexcept
 {
-	m_m = std::move(other.m_m);
-	m_s = std::move(other.m_s);
-	m_expanded = other.m_expanded;
+    swap(other);
 	return *this;
 }
 
@@ -842,12 +859,11 @@ void Unit::hmfe(Unit& u)
 Unit::sum_queue Unit::copy_sum_queue(sum_queue const& v)
 {
 	sum_queue vret;
-	auto const itend = v.end();
-	for (auto itnext = v.begin(); itnext != itend; ++itnext)
-	{
-		unique_ptr<Unit> const& u = *itnext;
-		vret.emplace_back(std::make_unique<Unit>(*u));//copy Unit
-	}
+    for(auto const & u:v)
+    {
+        if(u)
+            vret.emplace_back(new Unit(*u));//copy Unit
+    }
 	return vret;
 }
 
@@ -1207,4 +1223,10 @@ void Unit::setZero()
 	{
 		m_m.reset(new Multiple(0));
 	}
+}
+void Unit::swap(Unit & other) noexcept
+{
+    swapo(m_m, other.m_m);
+    m_s.swap(other.m_s);
+    std::swap(m_expanded, other.m_expanded);
 }
