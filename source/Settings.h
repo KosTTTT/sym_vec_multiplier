@@ -26,19 +26,29 @@ namespace Settings
 }
 /*copy unique_ptr*/
 template<typename T>
-inline static void cuptr(std::unique_ptr<T>& destinaton, std::unique_ptr<T> const& sourse)
+inline void cuptr(std::unique_ptr<T>& destinaton, std::unique_ptr<T> const& sourse)
 {
 	if (sourse)
 		destinaton.reset(new T(*sourse));
 	else
 		destinaton.reset(nullptr);
 }
-//template<typename T>
-//inline static void cop(std::optional<T>& destinaton, std::optional<T> const& sourse)
-//{
-//    if (sourse)
-//        destinaton.emplace(*sourse);
-//    else
-//        destinaton.reset();
-//}
+template<typename T>
+void swapo(std::optional<T> & f, std::optional<T> & s)
+{
+    if(f && s)
+    {
+        f->swap(*(s));
+    }
+    else if(f &&!s)
+    {
+        s.emplace(*f);
+        f.reset();
+    }
+    else if(!f && s)
+    {
+        f.emplace(*s);
+        s.reset();
+    }
+}
 #endif // SETTINGS_H

@@ -96,7 +96,7 @@ private:
     /*multiple of the gobal sum of units */
     class Multiple
     {
-    public:
+        friend class Unit;
         std::optional<ScalarGroup> m_sg;//scalar multiple
         std::optional<Vec> m_vec;//vector multiple
 
@@ -109,12 +109,19 @@ private:
 
         friend std::wostream& operator<<(std::wostream& out, Unit const& u);
     public:
-        Multiple()
-        {}
+        Multiple(){}
         Multiple(Settings::type_real v) :
             m_sg(v)
+        {}
+        explicit Multiple(std::wstring const& vec) :
+            m_vec(vec)
+        {}
+        explicit Multiple(Vec const& vec) :
+            m_vec(vec)
+        {}
+        Multiple(std::list<  sum_queue   > const& list)
         {
-
+            copy_arrunitsh(list,m_arrUnits);
         }
         Multiple(Multiple const& other);
         Multiple& operator=(Multiple const& other);
@@ -133,6 +140,8 @@ private:
          * Returns true if two Multiples can be added together
         */
         bool canbeadded(Multiple const& mother) const;
+        /*! Call it only if bool canbeadded(Multiple const& mother) const; returns true*/
+        void add(Multiple const & other);
         /*multiplies other to this*/
         void multiply(Multiple const& other);
         void swap(Multiple & other) noexcept;
@@ -158,7 +167,7 @@ private:
 public:
 	Unit()
 	{}
-	Unit(Settings::type_real v) :
+    Unit(Settings::type_real v):
         m_m(v)
 	{}
 	Unit(Unit const& other);
@@ -166,88 +175,55 @@ public:
 	Unit(Unit && other) noexcept;
 	Unit& operator=(Unit && other) noexcept;
 
-	/*! Multiply the Unit by Vec*/
+    /*! Multiply the Unit by Vec + */
 	template <typename T>
 	void multiplyByVec(T&& vec)
 	{
 		if (!m_m)
 		{
-			m_m.reset(new Multiple);
-			m_m->m_vec.reset(new Vec(std::forward<T>(vec)));
+            m_m.emplace(std::forward<T>(vec));
 		}
 		else
 		{
-			if (m_m->m_vec)
-			{
-				//multiply both vectors together (dot product)
-
-				std::unique_ptr<ScalarGroup> s(new ScalarGroup);
-				if constexpr (std::is_same_v<std::decay_t<T>, Vec>)
-				{
-					s->addVecdotted(std::move(*m_m->m_vec), std::forward<T>(vec));
-				}
-				else
-				{
-					s->addVecdotted(std::move(*m_m->m_vec), Vec(std::forward<T>(vec)));
-				}
-				m_m->m_sg->multiply(s);
-				m_m->m_vec.reset(nullptr);
-			}
-			else
-			{
-				m_m->m_vec.reset(new Vec(std::forward<T>(vec)));
-			}
+            Multiple vec{std::forward<T>(vec)};
+            m_m->multiply(vec);
 		}
 	}
 	/*! 
-	Multiplies everything together so that there will be either simple multiple without parentheses
-	or only global terms without brackets and Multiple will be 1. 
-	Those terms will include only ScalarGroups and Vectors.
-	Or in case there is only 1 global 
-	term after expansion it goes to the Multiple and global terms array will be 0.
-	Multiple is also expanded so that there is only ScalarGroups and possibly a Vector
-	*/
+    Multiplies everything together so that there will be either a simple multiple( without parentheses )
+    or sum of Units each of which has only simple multiples.
+    If a Unit is expanded it has either only simple multiple or it is without multiple but with sum of expanded Units .
+    + */
 	void expand();
-	/*! Adds argument to this Unit. Argument and this Unit will be expanded. After summation argument will be destroyed.*/
+    /*! Adds argument to this Unit. Argument and this Unit will be expanded. After summation argument will be destroyed.
+    - */
 	void sum(std::unique_ptr<Unit> & u);
-	/*! Multiplies this Unit to argument. Argument and this Unit will be expanded.*/
+    /*! Multiplies this Unit to argument. Argument and this Unit will be expanded.
+    - */
 	void multiply(std::unique_ptr<Unit> const & u);
-	/*! Multiply this Unit by an array of Unit sum. Argument will be moved.The unit becomes not expanded.*/
-	void multiplyBySum(sum_queue&l);
-	template<typename T>
-	void multiplyByScalar(T&& arg)
-	{
-		std::unique_ptr<ScalarGroup> s(new ScalarGroup);
-		s->addScalar(std::forward<T>(arg));
-		if (!m_m)
-			m_m.reset(new Multiple);
-		m_m->m_sg->multiply(s);
-		m_expanded = false;
-	}
-	template<typename T>
-	void multiplyByNumber(T&& arg)
-	{
-		if (!m_m)
-		{
-			m_m.reset(new Multiple(arg));
-		}
-		else
-		{
-			m_m->m_sg->addMultipe(m_m->m_sg->multiple() * arg);
-		}
-		m_expanded = false;
-	}
-	/*!Appends Unit argument to the terms of this Unit. The argument will vanish. The unit becomes not expanded.*/
-	void appendUnit(std::unique_ptr<Unit> & u);
+    /*! Multiply this Unit by an array of Unit sums.The unit becomes not expanded.
+    + */
+    void multiplyBySum(sum_queue const & l);
+    void multiplyBySum(sum_queue && l);
+
+    /*! + */
+    void multiplyByScalar(Scalar const& arg);
+    /*! + */
+    void multiplyByNumber(Settings::type_real const & arg);
+    /*!Appends the Unit to be in the list of the sum of Units. The unit becomes not expanded.
+    +*/
+    void appendUnit(Unit const& u);
+    void appendUnit(Unit && u);
 	/*!
 	For each term a unit has group them together if they has common multiple symbol str.
 	E.g. if u was x*t + a*t ,
 	after call with argument "t"
 	u becomes t(x+a).
 	If a symbol with str will not be found. The method will just expand the Unit and return
-	*/
+    -*/
 	void group(std::wstring const & str);
-	/*! Returns true, if a Unit has compounds expression in its multiple. E.g. if a Unit is 5*(t+3) method returns true. If 7*u*b - returns false*/
+    /*! Returns true, if a Unit has compounds expression in its multiple. E.g. if a Unit is 5*(t+3) method returns true. If 7*u*b - returns false
+    -*/
 	inline bool has_parenthesis_m() const
 	{
 		if (m_m && !m_m->m_arrUnits.empty())
@@ -257,37 +233,43 @@ public:
     void swap(Unit & other) noexcept;
 
 private:
-	/*sets multiple of this object to zero and clears everything else*/
+    /*sets multiple of this object to zero and clears everything else
+    + */
 	void setZero();
 	/*
 	both args are expanded.
-	*/
+    -*/
 	void hm(Unit& empty, Unit& notempty);
 
 	/*all elements of v must be with only one simple mutiple
 	tries to add everything together,if a unit can be added it is removed and is added to another Unit in the array, 
-	*/
+    +*/
 	static void hmta(sum_queue &v);
-	/*If an Unit has a single term and no multiple it is moved to multiple*/
+    /*If an Unit has a single term it is moved to a multiple. It is assumed that the parameter is expanded
+    +*/
 	static void hmfe(Unit & u);
 	/*units which sum together*/
 
 	/*
 	This method expands all the children and multiple of an argument, muliplies or adds everything if needed 
-	and returns terms as a list of expanded Units with only one simple multiple.
-	An object UnitChild will be destroyed and deallocated
-	*/
-	static sum_queue expand_move(std::unique_ptr<Unit> & UnitChild);
-	/* Turns multiple of this unit to an expanded Unit and returns it. Multiple of this object becomes nullptr.
-	If the Unit had not multiple returns nullptr*/
+    and returns a list of expanded Units with only one simple multiple.
+    An object UnitChild will be destroyed
+    -*/
+    static sum_queue expand_move(Unit & UnitChild);
+    /* Turns multiple of this unit to an expanded Unit and returns it. Multiple of this object will be destroyed.
+    If the Unit had not multiple returns nullptr
+    -*/
 	std::unique_ptr<Unit> moveMultiple();
-	/* Turns multiple of this unit to an array of expanded Units with only one simple multiple. Multiple of this object becomes nullptr.
-	Return array will be empty if the Unit does not have a multiple*/
+    /* Turns multiple of this unit to an array of expanded Units. Multiple of this object is destroyed.
+    Return array will be empty if the Unit does not have a multiple
+    +*/
 	sum_queue moveMultipleq();
-	static sum_queue copy_sum_queue(sum_queue const & v);
+    /* + */
+    static void append_sum_queue(sum_queue const & source, sum_queue & dest);
 
 	//returns an iterator to the unit from m_s with a maximum power Scalar and this Scalar in its array
 	//will return end if nothing was found
+    //-
 	auto h_fsm(std::wstring const& str)
 	{
 		auto const it_end = m_s.end();
@@ -327,7 +309,8 @@ private:
 
 
 };
-
+//-
 std::wostream& operator<<(std::wostream& out, Unit const& u);
-
+//-
+std::wostream& operator<<(std::wostream& out, ScalarGroup const& u);
 #endif // PT2_H
