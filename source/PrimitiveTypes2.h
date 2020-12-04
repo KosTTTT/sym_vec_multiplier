@@ -193,60 +193,50 @@ public:
     Multiplies everything together so that there will be either a simple multiple( without parentheses )
     or sum of Units each of which has only simple multiples.
     If a Unit is expanded it has either only simple multiple or it is without multiple but with sum of expanded Units .
-    + */
+     */
 	void expand();
-    /*! Adds argument to this Unit. Argument and this Unit will be expanded. After summation argument will be destroyed.
-    - */
-	void sum(std::unique_ptr<Unit> & u);
+    /*! Adds parameter to this Unit and expands it.
+     */
+    void sum(Unit const & u);
     /*! Multiplies this Unit to argument. Argument and this Unit will be expanded.
-    - */
-	void multiply(std::unique_ptr<Unit> const & u);
+     */
+    void multiply(Unit const & u);
     /*! Multiply this Unit by an array of Unit sums.The unit becomes not expanded.
-    + */
+     */
     void multiplyBySum(sum_queue const & l);
     void multiplyBySum(sum_queue && l);
 
-    /*! + */
+    /*!  */
     void multiplyByScalar(Scalar const& arg);
-    /*! + */
+    /*!  */
     void multiplyByNumber(Settings::type_real const & arg);
     /*!Appends the Unit to be in the list of the sum of Units. The unit becomes not expanded.
-    +*/
+    */
     void appendUnit(Unit const& u);
     void appendUnit(Unit && u);
 	/*!
-	For each term a unit has group them together if they has common multiple symbol str.
-	E.g. if u was x*t + a*t ,
+    Group Units together if they have common multiple symbol str.
+    E.g. if Unit is x*t + a*t ,
 	after call with argument "t"
 	u becomes t(x+a).
 	If a symbol with str will not be found. The method will just expand the Unit and return
-    -*/
+    */
 	void group(std::wstring const & str);
-    /*! Returns true, if a Unit has compounds expression in its multiple. E.g. if a Unit is 5*(t+3) method returns true. If 7*u*b - returns false
-    -*/
-	inline bool has_parenthesis_m() const
-	{
-		if (m_m && !m_m->m_arrUnits.empty())
-			return true;
-		return false;
-	}
+
     void swap(Unit & other) noexcept;
 
 private:
     /*sets multiple of this object to zero and clears everything else
-    + */
+     */
 	void setZero();
-	/*
-	both args are expanded.
-    -*/
-	void hm(Unit& empty, Unit& notempty);
+
 
 	/*all elements of v must be with only one simple mutiple
 	tries to add everything together,if a unit can be added it is removed and is added to another Unit in the array, 
-    +*/
+    */
 	static void hmta(sum_queue &v);
     /*If an Unit has a single term it is moved to a multiple. It is assumed that the parameter is expanded
-    +*/
+    */
 	static void hmfe(Unit & u);
 	/*units which sum together*/
 
@@ -254,59 +244,23 @@ private:
 	This method expands all the children and multiple of an argument, muliplies or adds everything if needed 
     and returns a list of expanded Units with only one simple multiple.
     An object UnitChild will be destroyed
-    -*/
+    */
     static sum_queue expand_move(Unit & UnitChild);
     /* Turns multiple of this unit to an expanded Unit and returns it. Multiple of this object will be destroyed.
     If the Unit had not multiple returns nullptr
-    -*/
+    */
 	std::unique_ptr<Unit> moveMultiple();
     /* Turns multiple of this unit to an array of expanded Units. Multiple of this object is destroyed.
     Return array will be empty if the Unit does not have a multiple
-    +*/
+    */
 	sum_queue moveMultipleq();
-    /* + */
+    /*  */
     static void append_sum_queue(sum_queue const & source, sum_queue & dest);
 
-	//returns an iterator to the unit from m_s with a maximum power Scalar and this Scalar in its array
+    //returns pair <an iterator to the unit from m_s with a maximum power Scalar , an iterator to this Scalar in its array>
 	//will return end if nothing was found
-    //-
-	auto h_fsm(std::wstring const& str)
-	{
-		auto const it_end = m_s.end();
-		auto it_ret1 = it_end;
-		decltype((*m_s.begin())->m_m->m_sg->m_arrScalar.end()) it_ret2;
-		Settings::type_real vmax = std::numeric_limits<Settings::type_real>::min();
-		for (auto it_next = m_s.begin(); it_next != it_end; ++it_next)
-		{
-			if (*it_next)
-			{
-				Unit& u = **it_next;
-				if (u.m_m)
-				{
-					auto const it_end02 = u.m_m->m_sg->m_arrScalar.end();
-					for (auto it02 = u.m_m->m_sg->m_arrScalar.begin(); it02 != it_end02; ++it02)
-					{
-						Scalar const& sc = *it02;
-						if (sc.m_sym == str)
-						{
-							if (sc.m_power > vmax)
-							{
-								vmax = sc.m_power;
-								it_ret1 = it_next;
-								it_ret2 = it02;
-							}
-						}
-					}
-				}
-			}
-		}
-		return std::make_pair(it_ret1, it_ret2);//++
-	};
-
-	///* Move unit to this multiple. It should be done only if unit is expanded.*/
-	//void mUtoM(std::unique_ptr<Unit> &unit);
-
-
+    //
+    auto h_fsm(std::wstring const& str)->std::pair<sum_queue::iterator,decltype(ScalarGroup::m_arrScalar)::iterator>;
 
 };
 //-
