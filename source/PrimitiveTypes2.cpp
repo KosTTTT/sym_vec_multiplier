@@ -156,7 +156,7 @@ ScalarGroup& ScalarGroup::add(ScalarGroup const& sg)
     }
 	return *this;
 }
-inline void ScalarGroup::AssignMultipe(Settings::type_real m)
+void ScalarGroup::AssignMultipe(Settings::type_real m)
 {
 	m_multiple = m;
 }
@@ -391,11 +391,11 @@ Unit::sum_queue Unit::moveMultipleq()
 	return sm;
 }
 
-inline bool Unit::Multiple::isOne() const noexcept
+bool Unit::Multiple::isOne() const noexcept
 {
     return m_arrUnits.empty() && !m_vec && m_sg && m_sg->isOne();
 }
-inline bool Unit::Multiple::isMinusOne() const noexcept
+bool Unit::Multiple::isMinusOne() const noexcept
 {
     return m_arrUnits.empty() && !m_vec && m_sg && m_sg->isMinusOne();
 }
@@ -689,33 +689,7 @@ void Unit::Multiple::add(Multiple const & other)
     }
 }
 
-//void Unit::hm(Unit& empty, Unit& notempty)
-//{
-//    unique_ptr<Unit> uempty=empty.moveMultiple();
 
-//	bool wasnotadded = true;
-//    //auto itneend = notempty.m_s.end();
-//    //for (auto itnext = notempty.m_s.begin(); itnext != itneend; ++itnext)
-//    for(auto & uptr: notempty.m_s)
-//	{
-//        if (uptr)
-//		{
-//			//try to add it
-//            if (Multiple::canbeadded(*uempty->m_m, *(*itnext)->m_m))
-//			{
-//				(*itnext)->m_m->m_sg->add(uempty->m_m->m_sg);
-//				wasnotadded = false;
-//				break;
-//			}
-//		}
-//	}
-//	if (wasnotadded)
-//	{
-//		//push uempty to the end of the list
-
-//		notempty.m_s.emplace_back(std::move(uempty));
-//	}
-//}
 
 void Unit::Multiple::multiply(Multiple const & other)
 {
@@ -770,12 +744,12 @@ Unit::Multiple::Multiple(Multiple&& other)noexcept :
 {
 
 }
-inline Unit::Multiple& Unit::Multiple::operator=(Multiple&& other) noexcept
+Unit::Multiple& Unit::Multiple::operator=(Multiple&& other) noexcept
 {
     swap(other);
     return *this;
 }
-inline bool Unit::Multiple::isZero() const
+bool Unit::Multiple::isZero() const
 {
 #ifdef DEBUG_BUILD
     if(m_arrUnits.empty() && !m_vec && !m_sg)

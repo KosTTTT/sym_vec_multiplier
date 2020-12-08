@@ -12,7 +12,7 @@
 namespace Settings
 {
     /*type for scalar multiplier*/
-    using type_real = int;
+    using type_real = long double;
 
 	template <typename T = type_real>
     constexpr T tolerance_init()

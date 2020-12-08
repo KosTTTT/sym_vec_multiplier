@@ -13,6 +13,20 @@ using namespace std;
 
 Local_vars lv;
 
+
+
+
+namespace
+{
+    void readUnit(std::unique_ptr<Unit>& u, bool allow_new_line = false);
+    /*check if a symbol was defined elsewhere with the same name*/
+    bool cvnwd(std::string const& str);
+    //void throwTheVariableWasDefinedError(std::string const & str);
+
+}
+
+
+
 namespace {
     //flag if input was successfully read
     bool bgood = true;
@@ -43,17 +57,17 @@ namespace {
             if (lv.m_vs.find(symbol) != lv.m_vs.end())
             {
                 //error--
-                string str1("error in line ");
-                str1 += std::to_string(lineCurrent);
-                str1 += ". The scalar symbol already defined in vector symbols";
+                string str1("The scalar symbol ");
+                str1+=symbol;
+                str1+=" has already been defined as a vector symbol";
                 throw str1;
             }
             else if(it01!=lv.m_lv.end())
             {
                 //error--
-                string str1("error in line ");
-                str1 += std::to_string(lineCurrent);
-                str1 += ". The scalar symbol already defined as a variable";
+                string str1("The scalar symbol ");
+                str1+=symbol;
+                str1+=" has already been defined as a variable";
                 throw str1;
             }
             //it is a scalar symbol
@@ -64,9 +78,9 @@ namespace {
             if(it01!=lv.m_lv.end())
             {
                 //error--
-                string str1("error in line ");
-                str1 += std::to_string(lineCurrent);
-                str1 += ". The vector symbol already defined as a variable";
+                string str1("The vector symbol ");
+                str1+=symbol;
+                str1+=" has already been defined as a variable";
                 throw str1;
             }
             unit.multiplyByVec(symbol);
@@ -85,9 +99,9 @@ namespace {
         else
         {
             //error--
-            string str1("error in line ");
-            str1 += std::to_string(lineCurrent);
-            str1 += ". A variable has already been defined";
+            string str1("The variable ");
+            str1+=symbol;
+            str1+=" is unknown\n";
             throw str1;
         }
     }
@@ -257,11 +271,11 @@ namespace {
     /*handles a keyword input, or returns false if no such keyword defined*/
     bool handleKeyword(std::string const& str)
     {
-        auto hf1 = [&](auto& func)
+        auto hf1 = [](auto& func)
         {
             waitForVarName();
-            auto str = get_variable();
-            func(str);
+            auto var = get_variable();
+            func(var);
 
             //read other symbols separated by commas or blanks
             bool comma_was_hit = false;
@@ -301,7 +315,7 @@ namespace {
             //define a vector variable symbol
 
             std::function<void(std::string const& str)> f=
-                [&](std::string const & str)
+                [](std::string const & str)
             {
                 if (cvnwd(str))
                 {
@@ -321,7 +335,7 @@ namespace {
             //hf1(lv.m_ss);
 
             std::function<void(std::string const& str)> f =
-                [&](std::string const& str)
+                [](std::string const& str)
             {
                 if (cvnwd(str))
                     lv.m_ss.insert(str);
@@ -344,7 +358,7 @@ namespace {
         else if (str == "expand")
         {
             std::function<void(std::string const& str)> f =
-                [&](std::string const& str)
+                [](std::string const& str)
             {
                 auto it_found = lv.m_lv.find(str);
                 if (it_found != lv.m_lv.end())
@@ -366,7 +380,7 @@ namespace {
         else if (str == "clear")//erase one, some or all variables from the local variables
         {
             std::function<void(std::string const& str)> f =
-                [&](std::string const& str)
+                [](std::string const& str)
             {
                 if (str == "all")
                 {
@@ -381,8 +395,6 @@ namespace {
                     {
                         lv.m_lv.erase(it_found);
                     }
-                    else
-                        throw lineCurrent;
                 }
             };
             hf1(f);
@@ -626,15 +638,10 @@ namespace {
         }
         if (umain)	//add unit to local variables
         {
-            if(lv.m_lv.find(UnitName) == lv.m_lv.end())
-                lv.m_lv.insert(std::make_pair(UnitName,std::move(umain)));
-            else
-            {
-                std::string str {"The variable name "};
-                str+=UnitName;
-                str+=" already exists. ";
-                throw str;
-            }
+            auto it_find = lv.m_lv.find(UnitName);
+            if(it_find != lv.m_lv.end())
+                lv.m_lv.erase(it_find);
+            lv.m_lv.insert(std::make_pair(UnitName,std::move(umain)));
         }
         else
             throw lineCurrent;//error--
