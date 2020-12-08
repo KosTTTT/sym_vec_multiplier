@@ -18,7 +18,7 @@
 class ScalarGroup
 {
 	friend class Unit;
-		friend std::wostream& operator<<(std::wostream& out, ScalarGroup const& u);
+        friend std::ostream& operator<<(std::ostream& out, ScalarGroup const& u);
 
         /*! A number that is multiplied by this ScalarGroup. Default is 1*/
         Settings::type_real m_multiple = 1;
@@ -46,19 +46,19 @@ public:
     ScalarGroup& add(ScalarGroup const & sg);
     /*! Set to zero and clears data members*/
     void setZero() noexcept;
-    inline Settings::type_real multiple() const noexcept
+    Settings::type_real multiple() const noexcept
 	{
 		return m_multiple;
 	}
-    inline bool isZero() const noexcept
+    bool isZero() const noexcept
 	{
         return std::abs(m_multiple) < Settings::scalar_tol;
 	}
-    inline std::vector<Scalar> const& arrScalar() const noexcept
+    std::vector<Scalar> const& arrScalar() const noexcept
 	{
 		return m_arrScalar;
 	}
-    inline std::vector<Vecdotted> const& arrVecDotted() const noexcept
+    std::vector<Vecdotted> const& arrVecDotted() const noexcept
 	{
 		return m_arrVecdotted;
 	}
@@ -69,16 +69,16 @@ public:
     /*! Append a dot product of two vectors.*/
 
     template<typename ...Params>
-    inline void MultByVecdotted(Params && ...params)
+    void MultByVecdotted(Params && ...params)
 	{
         m_arrVecdotted.emplace_back(std::forward<Params>(params)...);
 	}
     /*! Returns true if ScalarGroup equals 1*/
-    inline bool isOne() const noexcept
+    bool isOne() const noexcept
 	{
         return m_arrScalar.empty() && m_arrVecdotted.empty() && std::abs(m_multiple-1) < Settings::scalar_tol;
 	}
-    inline bool isMinusOne() const noexcept
+    bool isMinusOne() const noexcept
 	{
         return m_arrScalar.empty() && m_arrVecdotted.empty() && std::abs(m_multiple +1)< Settings::scalar_tol;
 	}
@@ -107,13 +107,13 @@ private:
         */
         std::list<  sum_queue   > m_arrUnits;
 
-        friend std::wostream& operator<<(std::wostream& out, Unit const& u);
+        friend std::ostream& operator<<(std::ostream& out, Unit const& u);
     public:
         Multiple(){}
         Multiple(Settings::type_real v) :
             m_sg(v)
         {}
-        explicit Multiple(std::wstring const& vec) :
+        explicit Multiple(std::string const& vec) :
             m_vec(vec)
         {}
         explicit Multiple(Vec const& vec) :
@@ -128,7 +128,7 @@ private:
         Multiple(Multiple&& other) noexcept;
         Multiple& operator=(Multiple&& other) noexcept;
         /*returns true is this multiple is zero. So everything that multiplies on it will be zero*/
-        bool isZero() const noexcept;
+        bool isZero() const;
         void setZero() noexcept;
         /*returns true if multiple is one*/
         bool isOne() const noexcept;
@@ -151,7 +151,7 @@ private:
 
     };
 
-    friend std::wostream& operator<<(std::wostream& out, Unit const& u);
+    friend std::ostream& operator<<(std::ostream& out, Unit const& u);
 
 
     /*Multiple of m_s*/
@@ -185,8 +185,8 @@ public:
 		}
 		else
 		{
-            Multiple vec{std::forward<T>(vec)};
-            m_m->multiply(vec);
+            Multiple mtmp{std::forward<T>(vec)};
+            m_m->multiply(mtmp);
 		}
 	}
 	/*! 
@@ -221,7 +221,12 @@ public:
 	u becomes t(x+a).
 	If a symbol with str will not be found. The method will just expand the Unit and return
     */
-	void group(std::wstring const & str);
+    void group(std::string const & str);
+    /*! Returns true, if a Unit has compounds expression in its multiple. E.g. if a Unit is 5*(t+3) method returns true. If 7*u*b - returns false*/
+    inline bool has_parenthesis_m() const
+    {
+        return m_m && !m_m->m_arrUnits.empty();
+    }
 
     void swap(Unit & other) noexcept;
 
@@ -240,12 +245,12 @@ private:
 	static void hmfe(Unit & u);
 	/*units which sum together*/
 
-	/*
-	This method expands all the children and multiple of an argument, muliplies or adds everything if needed 
+    /* Parameter UnitChild must be not null.
+    This method expands an argument,
     and returns a list of expanded Units with only one simple multiple.
     An object UnitChild will be destroyed
     */
-    static sum_queue expand_move(Unit & UnitChild);
+    static sum_queue expand_move(std::unique_ptr<Unit> & UnitChild);
     /* Turns multiple of this unit to an expanded Unit and returns it. Multiple of this object will be destroyed.
     If the Unit had not multiple returns nullptr
     */
@@ -260,11 +265,11 @@ private:
     //returns pair <an iterator to the unit from m_s with a maximum power Scalar , an iterator to this Scalar in its array>
 	//will return end if nothing was found
     //
-    auto h_fsm(std::wstring const& str)->std::pair<sum_queue::iterator,decltype(ScalarGroup::m_arrScalar)::iterator>;
+    auto h_fsm(std::string const& str)->std::pair<sum_queue::iterator,decltype(ScalarGroup::m_arrScalar)::iterator>;
 
 };
 //-
-std::wostream& operator<<(std::wostream& out, Unit const& u);
-//-
-std::wostream& operator<<(std::wostream& out, ScalarGroup const& u);
+std::ostream& operator<<(std::ostream& out, Unit const& u);
+//+
+std::ostream& operator<<(std::ostream& out, ScalarGroup const& u);
 #endif // PT2_H

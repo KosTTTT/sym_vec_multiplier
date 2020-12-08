@@ -5,59 +5,34 @@ Symbol::Symbol():
 	m_sym()
 {}
 
-inline bool Symbol::operator == (Symbol const& other) const
-{
-	return m_sym == other.m_sym;
-}
-inline bool Symbol::operator != (Symbol const& other) const
-{
-	return !(*this == other);
-}
-void Symbol::swap(Symbol & other) noexcept
-{
-    m_sym.swap(other.m_sym);
-}
+
 Scalar::Scalar():
 	Symbol()
 {
 
 }
-Scalar::Scalar(wchar_t const* str, unsigned power):
+Scalar::Scalar(char const* str, unsigned power):
 	Symbol(str),
 	m_power(power)
 {
 
 }
-Scalar::Scalar(std::wstring const& str, unsigned power):
+Scalar::Scalar(std::string const& str, unsigned power):
 	Symbol(str),
 	m_power(power)
 {
 
 }
-Scalar::Scalar(std::wstring && str, unsigned power) noexcept:
+Scalar::Scalar(std::string && str, unsigned power) noexcept:
 	Symbol(std::move(str)),
 	m_power(power)
 {
 
 }
-inline bool Scalar::operator==(Scalar const& other) const
-{
-	return (static_cast<Symbol const&>(*this) == other) && (m_power == other.m_power);
-}
-inline bool Scalar::operator !=(Scalar const& other)const
-{
-	return !(*this == other);
-}
-inline Scalar & Scalar::multiply(Scalar const & other)
-{
-    m_power+=other.m_power;
-    return *this;
-}
-void Scalar::swap(Scalar & other) noexcept
-{
-    Symbol::swap(other);
-    std::swap(m_power, other.m_power);
-}
+
+
+
+
 
 bool Vecdotted::operator == (Vecdotted const& other) const
 {
@@ -71,28 +46,21 @@ bool Vecdotted::operator == (Vecdotted const& other) const
 	}
 	return false;
 }
-void Vecdotted::swap(Vecdotted & other) noexcept
-{
-    m_v1.swap(other.m_v1);
-    m_v2.swap(other.m_v2);
-}
-inline bool Vecdotted::operator != (Vecdotted const& other) const
-{
-	return !(*this==other);
-}
-std::wostream& operator<<(std::wostream& out, Symbol const& u)
+
+
+std::ostream& operator<<(std::ostream& out, Symbol const& u)
 {
 	return out << u.m_sym;
 }
-std::wostream& operator<<(std::wostream& out, Vec const& u)
+std::ostream& operator<<(std::ostream& out, Vec const& u)
 {
      return out << '_' << static_cast<Symbol const&>(u);
 }
-std::wostream& operator<<(std::wostream& out, Vecdotted const& u)
+std::ostream& operator<<(std::ostream& out, Vecdotted const& u)
 {
     return out << u.m_v1 << "dot" << u.m_v2;
 }
-std::wostream& operator<<(std::wostream& out, Scalar const& u)
+std::ostream& operator<<(std::ostream& out, Scalar const& u)
 {
     out << static_cast<Symbol const&>(u);
     //if the power of scalar equals 1 do not print it. User will assume it is 1

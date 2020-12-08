@@ -92,7 +92,7 @@ ScalarGroup& ScalarGroup::multiply(ScalarGroup const& sg)
     }
 	return *this;
 }
-inline void ScalarGroup::setZero() noexcept
+void ScalarGroup::setZero() noexcept
 {
 	m_multiple = 0;
 	m_arrScalar.clear();
@@ -254,7 +254,7 @@ void Unit::expand()
 	for (auto it2 = m_s.begin(); it2 != endms; ++it2)
 	{
         if(*it2)
-            ms_expanded.splice(ms_expanded.end(), expand_move(**it2));
+            ms_expanded.splice(ms_expanded.end(), expand_move(*it2));
 	}
 	m_s.clear();
 #ifdef DEBUG_BUILD
@@ -400,12 +400,12 @@ inline bool Unit::Multiple::isMinusOne() const noexcept
     return m_arrUnits.empty() && !m_vec && m_sg && m_sg->isMinusOne();
 }
 //--
-Unit::sum_queue Unit::expand_move(Unit& UnitChild)
+Unit::sum_queue Unit::expand_move(std::unique_ptr<Unit>& UnitChild)
 {
 	sum_queue ret;
-    UnitChild.expand();
+    UnitChild->expand();
 
-    if (UnitChild.m_m)
+    if (UnitChild->m_m)
     {
         ret.emplace_back(std::move(UnitChild));
     }
@@ -413,11 +413,11 @@ Unit::sum_queue Unit::expand_move(Unit& UnitChild)
     {
 #ifdef DEBUG_BUILD
 
-        if(UnitChild.m_s.empty())
+        if(UnitChild->m_s.empty())
             std::cerr<<"error in Unit::sum_queue Unit::expand_move(Unit& UnitChild). UnitChild.m_s.empty()";
 #endif
-        ret = std::move(UnitChild.m_s);
-        UnitChild.~Unit();
+        ret = std::move(UnitChild->m_s);
+        UnitChild.reset(nullptr);
     }
 	return ret;
 }
@@ -732,7 +732,7 @@ void Unit::Multiple::multiply(Multiple const & other)
 	{
         if(!m_sg)
             m_sg = std::make_optional<ScalarGroup>();
-        m_sg->MultByVecdotted(m_vec, other.m_vec);
+        m_sg->MultByVecdotted(*m_vec, *other.m_vec);
         m_vec.reset();
 	}
 	else if (!m_vec && other.m_vec)
@@ -758,7 +758,7 @@ Unit::Multiple::Multiple(Multiple const& other):
 {
 	copy_arrunits(other.m_arrUnits);
 }
-Unit::Multiple& Unit::Multiple::operator=(Multiple const& other)
+inline Unit::Multiple& Unit::Multiple::operator=(Multiple const& other)
 {
     Multiple m(other);
     return *this = std::move(m);
@@ -770,24 +770,22 @@ Unit::Multiple::Multiple(Multiple&& other)noexcept :
 {
 
 }
-Unit::Multiple& Unit::Multiple::operator=(Multiple&& other) noexcept
+inline Unit::Multiple& Unit::Multiple::operator=(Multiple&& other) noexcept
 {
     swap(other);
     return *this;
 }
-bool Unit::Multiple::isZero() const noexcept
+inline bool Unit::Multiple::isZero() const
 {
 #ifdef DEBUG_BUILD
     if(m_arrUnits.empty() && !m_vec && !m_sg)
     {
-        std::cerr<<"error in bool Unit::Multiple::isZero() const noexcept \n if(m_arrUnits.empty() && !m_vec && !m_sg)";
+        throw std::logic_error("error in bool Unit::Multiple::isZero() const noexcept \n if(m_arrUnits.empty() && !m_vec && !m_sg)");
     }
 #endif
 
 
-    if(m_arrUnits.empty() && !m_vec && m_sg && m_sg->isZero() )
-        return true;
-    return false;
+    return m_arrUnits.empty() && !m_vec && m_sg && m_sg->isZero();
 }
 void Unit::Multiple::setZero() noexcept
 {
@@ -795,7 +793,7 @@ void Unit::Multiple::setZero() noexcept
     m_sg.emplace(0);
     m_vec.reset();
 }
-void Unit::Multiple::copy_arrunits(std::list<  sum_queue   >  const& other)
+inline void Unit::Multiple::copy_arrunits(std::list<  sum_queue   >  const& other)
 {
 	m_arrUnits.clear();
     copy_arrunitsh(other,m_arrUnits);
@@ -820,7 +818,7 @@ Unit::Unit(Unit const& other) :
 {
     append_sum_queue(other.m_s,m_s);
 }
-Unit& Unit::operator=(Unit const& other)
+inline Unit& Unit::operator=(Unit const& other)
 {
     Unit u(other);
     return *this = std::move(u);
@@ -832,7 +830,7 @@ Unit::Unit(Unit&& other) noexcept :
 {
 
 }
-Unit& Unit::operator=(Unit&& other) noexcept
+inline Unit& Unit::operator=(Unit&& other) noexcept
 {
     swap(other);
 	return *this;
@@ -911,10 +909,10 @@ void Unit::appendUnit(Unit const& u)
 }
 void Unit::appendUnit(Unit && u)
 {
-    m_s.emplace_back(std::move(u));
+    m_s.emplace_back(new Unit{std::move(u)});
     m_expanded = false;
 }
-void Unit::group(std::wstring const& str)
+void Unit::group(std::string const& str)
 {
 	expand();
 	
@@ -1051,8 +1049,40 @@ void Unit::group(std::wstring const& str)
 	m_expanded = false;
 	m_s.splice(m_s.begin(), msnew);//++end
 }
-std::wostream& operator<<(std::wostream& out, Unit const& u)
+
+
+std::ostream& operator<<(std::ostream& out, Unit const& u)
 {
+    auto printsum_h=[](std::ostream& out, Unit::sum_queue const & sum)
+    {
+        //print the first unit
+        auto it_begin = sum.begin();
+        if(*it_begin)
+        {
+            out << **it_begin;
+        }
+            //print others
+        for (auto it = ++it_begin, end = sum.end(); it != end; ++it)
+        {
+            if (*it)
+            {
+                if ((*it)->m_m && (*it)->m_m->isZero())
+                    continue;
+                //**decide put "+" or not
+                if ((*it)->m_m && (*it)->m_m->m_sg)
+                {
+                    if ((*it)->m_m->m_sg->multiple() < 0)
+                    {
+                        out << **it;
+                        continue;
+                    }
+                }
+                //**
+                out << '+';
+                out << **it;
+            }
+        }
+    };
 	//return out<<L"test";
 
 	//print multiple first
@@ -1063,7 +1093,7 @@ std::wostream& operator<<(std::wostream& out, Unit const& u)
 
 	if (u.m_m && u.m_m->isZero())
 	{
-		out << 0;
+        out << '0';
 		return out;//++exit
 	}
 
@@ -1083,7 +1113,7 @@ std::wostream& operator<<(std::wostream& out, Unit const& u)
 				}
 				else
 				{
-					out << std::wstring{ L"-" };
+                    out << '-';
 				}
 			}
 			else if (u.m_m->m_sg->isOne())
@@ -1104,7 +1134,7 @@ std::wostream& operator<<(std::wostream& out, Unit const& u)
 		{
 			if (bprint_m_before_v)
 			{
-				out << std::wstring{ L"*" };
+                out << '*';
 			}
 			out << *u.m_m->m_vec;
 		}
@@ -1113,95 +1143,51 @@ std::wostream& operator<<(std::wostream& out, Unit const& u)
 		{
 			if (!sum.empty())
 			{
-				out << std::wstring{ L"(" };
+                out << '(';
 
-				//print the first unit
-				if (*sum.begin())
-				{
-					Unit const& u1 = **sum.begin();
-					out << u1;
-					//print others
-					auto end = sum.end();
-					for (auto it = ++sum.begin(); it != end; ++it)
-					{
-						if (*it)
-						{
-							if ((*it)->m_m && (*it)->m_m->isZero())
-								continue;
-							if ((*it)->m_m && (*it)->m_m->m_sg)
-								if ((*it)->m_m->m_sg->multiple() > 0)
-								{
-									out << std::wstring{ L"+" };
-								}
-							Unit const& utmp = **it;
-							out << utmp;
-						}
-					}
-					out << std::wstring{ L")" };
-				}
+                printsum_h(out,sum);
+
+                out << ')';
 			}
 		}
 	}
 	//--
 
-	//print the sum of multiples. Wrap it in brackets if a multiple was printed
+    //print the sum of multiples. Wrap it in parenthesis if Unit has multiple
 
 	if (!u.m_s.empty())
 	{
-		if (u.m_m && !u.m_m->isOne())
+        bool par=u.m_m && !u.m_m->isOne();
+        if (par)
 		{
-			out << std::wstring{ L"(" };
+            out << '(';
 		}
-		if (*u.m_s.begin())
-		{
-			Unit const& ubref = **u.m_s.begin();
-			out << ubref;
-			auto end = u.m_s.end();
-			for (auto it = ++u.m_s.begin(); it != end; ++it)
-			{
-				if (*it)
-				{
-					if ((*it)->m_m && (*it)->m_m->m_sg)
-					{
-						if ((*it)->m_m->isZero())
-						{
-							continue;
-						}
-						else if ((*it)->m_m->m_sg->multiple() > 0)
-						{
-							out << std::wstring{ L"+" };
-						}
-					}
-					Unit const& utmp = **it;
-					out << utmp;
-				}
-			}
-		}
+        printsum_h(out,u.m_s);
 
-		if (u.m_m && !u.m_m->isOne())
+        if (par)
 		{
-			out << std::wstring{ L")" };
+            out << ')';
 		}
 	}
 	return out;
 }
 
-std::wostream& operator<<(std::wostream& out, ScalarGroup const& u)
+std::ostream& operator<<(std::ostream& out, ScalarGroup const& u)
 {
 	bool was1 = false;
 	bool was_m1 = false;
-	if (abs(u.m_multiple + 1) < Settings::tolerance)
+    if (std::abs(u.m_multiple + 1) < Settings::scalar_tol)
 	{
 		was_m1 = true;
 		//if it is "-1"
 		if (u.m_arrScalar.empty() && u.m_arrVecdotted.empty())
-			out << std::wstring{ L"-1" };
+            out << "-1";
 		else
-			out << std::wstring{ L"-" };
+            out << '-';
 	}
 	else
 	{
-		if (abs(u.m_multiple - 1) < Settings::tolerance)
+        if (std::abs(u.m_multiple - 1) < Settings::scalar_tol)
 		{
 			was1 = true;
 			//if multiple is 1
@@ -1215,18 +1201,19 @@ std::wostream& operator<<(std::wostream& out, ScalarGroup const& u)
 			out << u.m_multiple;
 		}
 	}
+
+
 	if (!u.m_arrScalar.empty())
 	{
-		auto const& elb = u.m_arrScalar.front();
 		if (!was1 && !was_m1)
 		{
-			out << std::wstring{ L"*" };
+            out << '*' ;
 		}
-		out << elb;
+        out << u.m_arrScalar.front();
 		auto end = u.m_arrScalar.end();
 		for (auto it = ++u.m_arrScalar.begin(); it!=end; ++it)
 		{
-			out<< std::wstring{ L"*" } << *it;
+            out<< '*' << *it;
 		}
 	}
 	if (!u.m_arrVecdotted.empty())
@@ -1236,19 +1223,18 @@ std::wostream& operator<<(std::wostream& out, ScalarGroup const& u)
 		{
 			if (!was1 && !was_m1)
 			{
-				out << std::wstring{ L"*" };
+                out << '*' ;
 			}
 		}
 		else
 		{
-			out << std::wstring{ L"*" };
+            out << '*';
 		}
-		auto const& elb = u.m_arrVecdotted.front();
-		out << elb;
+        out << u.m_arrVecdotted.front();
 		auto end = u.m_arrVecdotted.end();
 		for (auto it = ++u.m_arrVecdotted.begin(); it != end; ++it)
 		{
-			out << std::wstring{L"*"} << *it;
+            out << '*' << *it;
 		}
 	}
 	return out;
@@ -1266,7 +1252,7 @@ void Unit::swap(Unit & other) noexcept
     m_s.swap(other.m_s);
     std::swap(m_expanded, other.m_expanded);
 }
-auto Unit::h_fsm(std::wstring const& str)->std::pair<sum_queue::iterator,decltype(ScalarGroup::m_arrScalar)::iterator>
+auto Unit::h_fsm(std::string const& str)->std::pair<sum_queue::iterator,decltype(ScalarGroup::m_arrScalar)::iterator>
 {
     auto const it_end = m_s.end();
     auto it_ret1 = it_end;

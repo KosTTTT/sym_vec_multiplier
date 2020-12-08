@@ -15,11 +15,11 @@ class Local_vars
 {
 public:
 	/*! User defined symbols for vectors*/
-	std::unordered_set<std::wstring> m_vs;
+    std::unordered_set<std::string> m_vs;
 	/*! User defined symbols for scalars*/
-	std::unordered_set<std::wstring> m_ss;
+    std::unordered_set<std::string> m_ss;
     /*! User defined variables containing expressions*/
-	std::unordered_map<std::wstring, std::unique_ptr<Unit>> m_lv;
+    std::unordered_map<std::string, std::unique_ptr<Unit>> m_lv;
 };
 
 #endif // LV_H
