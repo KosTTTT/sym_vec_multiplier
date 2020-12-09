@@ -687,6 +687,8 @@ void Unit::Multiple::add(Multiple const & other)
             else if(m_sg && other.m_sg)
                 m_sg->add(*other.m_sg);
     }
+    if(m_sg && m_sg->isZero())
+        setZero();
 }
 
 
@@ -724,6 +726,9 @@ void Unit::Multiple::multiply(Multiple const & other)
     {
         m_sg.emplace(*other.m_sg);
     }
+    //can it be zero after a multiplication of two numbers ?
+    if(m_sg && m_sg->isZero())
+        setZero();
 }
 
 Unit::Multiple::Multiple(Multiple const& other):
@@ -829,7 +834,12 @@ void Unit::hmta(sum_queue & v)
                         if((*it1)->m_m->canbeadded(*(*it2)->m_m))
 						{
                             (*it1)->m_m->add(*(*it2)->m_m);
-							(*it2).reset(nullptr);
+                            (*it2).reset(nullptr);
+                            if((*it1)->m_m->isZero())
+                            {
+                                it1->reset(nullptr);
+                                break;
+                            }
 						}
 				}
 			}
@@ -1040,8 +1050,9 @@ std::ostream& operator<<(std::ostream& out, Unit const& u)
         {
             if (*it)
             {
-                if ((*it)->m_m && (*it)->m_m->isZero())
-                    continue;
+                //if ((*it)->m_m && (*it)->m_m->isZero())
+                //    continue;
+
                 //**decide put "+" or not
                 if ((*it)->m_m && (*it)->m_m->m_sg)
                 {

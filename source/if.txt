@@ -27,9 +27,6 @@ expand u2
 group u2 t
 print u2
 
-symv x,y
-f = x*y*y*x + y*x*x*y
-print f
 
 
 

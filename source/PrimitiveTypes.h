@@ -11,18 +11,19 @@ class Symbol
 {
     friend std::ostream& operator<<(std::ostream& out, Symbol const& u);
 public:
+    std::string m_sym;
 	Symbol();
     explicit Symbol(char const * str):
-		m_sym(str)
-	{}
+        m_sym(str)
+    {}
     explicit  Symbol(std::string const& str) :
-		m_sym(str)
-	{}
+        m_sym(str)
+    {}
     explicit  Symbol(std::string&& str) noexcept:
-		m_sym(std::move(str))
-	{}
+        m_sym(std::move(str))
+    {}
 
-    std::string m_sym;
+
     bool operator == (Symbol const& other) const noexcept
     {
         return m_sym == other.m_sym;

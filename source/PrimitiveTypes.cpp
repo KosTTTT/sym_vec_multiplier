@@ -12,20 +12,20 @@ Scalar::Scalar():
 
 }
 Scalar::Scalar(char const* str, unsigned power):
-	Symbol(str),
-	m_power(power)
+    Symbol(str),
+    m_power(power)
 {
 
 }
 Scalar::Scalar(std::string const& str, unsigned power):
-	Symbol(str),
-	m_power(power)
+    Symbol(str),
+    m_power(power)
 {
 
 }
 Scalar::Scalar(std::string && str, unsigned power) noexcept:
-	Symbol(std::move(str)),
-	m_power(power)
+    Symbol(std::move(str)),
+    m_power(power)
 {
 
 }
