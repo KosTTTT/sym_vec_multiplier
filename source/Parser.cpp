@@ -141,7 +141,7 @@ namespace {
     }
     inline bool is_var_start()
     {
-        return is_character() || ch=='_';
+        return is_character();// || ch=='_';
     }
     //look for variable assignment sign. If found return true
     //e.g. "u = "
