@@ -7,7 +7,7 @@
 #include <list>
 #include "Settings.h"
 #include <initializer_list>
-#include <iostream>
+#include <iosfwd>
 #include <cmath>
 #include <optional>
 

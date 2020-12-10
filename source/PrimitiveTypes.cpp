@@ -1,6 +1,7 @@
 #include "PrimitiveTypes.h"
 #include "Settings.h"
 #include <utility>
+#include <iostream>
 Symbol::Symbol():
 	m_sym()
 {}

@@ -3,7 +3,7 @@
 
 #include <string>
 #include <vector>
-#include <iostream>
+#include <iosfwd>
 
 
 /*! Holds symbolic name of a variable*/

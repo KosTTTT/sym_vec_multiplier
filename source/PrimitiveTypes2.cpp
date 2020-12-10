@@ -750,7 +750,7 @@ Unit::Multiple::Multiple(Multiple const& other):
 {
 	copy_arrunits(other.m_arrUnits);
 }
-inline Unit::Multiple& Unit::Multiple::operator=(Multiple const& other)
+Unit::Multiple& Unit::Multiple::operator=(Multiple const& other)
 {
     Multiple m(other);
     return *this = std::move(m);
@@ -767,7 +767,7 @@ Unit::Multiple& Unit::Multiple::operator=(Multiple&& other) noexcept
     swap(other);
     return *this;
 }
-bool Unit::Multiple::isZero() const
+inline bool Unit::Multiple::isZero() const
 {
 #ifdef DEBUG_BUILD
     if(m_arrUnits.empty() && !m_vec && !m_sg)
@@ -810,7 +810,7 @@ Unit::Unit(Unit const& other) :
 {
     append_sum_queue(other.m_s,m_s);
 }
-inline Unit& Unit::operator=(Unit const& other)
+Unit& Unit::operator=(Unit const& other)
 {
     Unit u(other);
     return *this = std::move(u);
@@ -822,7 +822,7 @@ Unit::Unit(Unit&& other) noexcept :
 {
 
 }
-inline Unit& Unit::operator=(Unit&& other) noexcept
+Unit& Unit::operator=(Unit&& other) noexcept
 {
     swap(other);
 	return *this;
@@ -840,16 +840,21 @@ void Unit::hmta(sum_queue & v)
         if (*it1 && (*it1)->m_m)
         {
             ++count;
-            auto it2 = it1;
-            ++it2;
-            for (; it2 != ite1; ++it2)
+            if(!(*it1)->m_m->isZero())
             {
-                if (*it2 && (*it2)->m_m)
+                auto it2 = it1;
+                ++it2;
+                for (; it2 != ite1; ++it2)
                 {
-                    if((*it1)->m_m->canbeadded(*(*it2)->m_m))
+                    if (*it2 && (*it2)->m_m)
                     {
-                        (*it1)->m_m->add(*(*it2)->m_m);
-                        (*it2).reset(nullptr);
+                        if((*it1)->m_m->canbeadded(*(*it2)->m_m))
+                        {
+                            (*it1)->m_m->add(*(*it2)->m_m);
+                            (*it2).reset(nullptr);
+                            if((*it1)->m_m->isZero())
+                                break;//not goint to add zero to something else
+                        }
                     }
                 }
             }
