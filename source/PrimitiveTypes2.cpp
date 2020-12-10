@@ -632,6 +632,8 @@ void Unit::multiply(Unit const& upar)
 }
 bool Unit::Multiple::canbeadded(Multiple const& mother) const
 {
+    if(isZero() || mother.isZero())
+        return true;
 
     if(m_arrUnits.empty() && mother.m_arrUnits.empty())
     {
@@ -667,8 +669,19 @@ bool Unit::Multiple::canbeadded(Multiple const& mother) const
 }
 void Unit::Multiple::add(Multiple const & other)
 {
+    if(isZero())
+    {
+        if(!other.isZero())
+            *this = other;
+        return;
+    }
+    if(other.isZero())
+        return;
+
+
     if(!m_vec && !other.m_vec)
     {
+        //other.m_sg!=null and m_sg!=null
         m_sg->add(*other.m_sg);
     }
     else if(m_vec && other.m_vec)
@@ -764,7 +777,7 @@ bool Unit::Multiple::isZero() const
 #endif
 
 
-    return m_arrUnits.empty() && !m_vec && m_sg && m_sg->isZero();
+    return m_sg && m_sg->isZero();
 }
 void Unit::Multiple::setZero() noexcept
 {
@@ -817,34 +830,49 @@ inline Unit& Unit::operator=(Unit&& other) noexcept
 
 void Unit::hmta(sum_queue & v)
 {
+    auto const itb1 = v.begin();
+    auto const ite1 = v.end();
 
-	auto const itb1 = v.begin();
-	auto const ite1 = v.end();
-
-	for (auto it1 = itb1; it1 != ite1; ++it1)
-	{
+    //how much valid multiples
+    size_t count = 0;
+    for (auto it1 = itb1; it1 != ite1; ++it1)
+    {
         if (*it1 && (*it1)->m_m)
-		{
-			auto it2 = it1;
-			++it2;
-			for (; it2 != ite1; ++it2)
-			{
+        {
+            ++count;
+            auto it2 = it1;
+            ++it2;
+            for (; it2 != ite1; ++it2)
+            {
                 if (*it2 && (*it2)->m_m)
-				{
-                        if((*it1)->m_m->canbeadded(*(*it2)->m_m))
-						{
-                            (*it1)->m_m->add(*(*it2)->m_m);
-                            (*it2).reset(nullptr);
-                            if((*it1)->m_m->isZero())
-                            {
-                                it1->reset(nullptr);
-                                break;
-                            }
-						}
-				}
-			}
-		}
-	}
+                {
+                    if((*it1)->m_m->canbeadded(*(*it2)->m_m))
+                    {
+                        (*it1)->m_m->add(*(*it2)->m_m);
+                        (*it2).reset(nullptr);
+                    }
+                }
+            }
+        }
+    }
+//remove zeroes
+
+    if(count>1)
+    {
+        for (auto it1 = itb1; it1 != ite1; ++it1)
+        {
+            if (*it1 && (*it1)->m_m && (*it1)->m_m->isZero())
+            {
+                it1->reset(nullptr);
+                --count;
+                if(count==1)
+                    break;
+            }
+        }
+    }
+
+
+
 
     v.remove_if([](std::unique_ptr<Unit> const &el)->bool
                {
