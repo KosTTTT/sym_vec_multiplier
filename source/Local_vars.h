@@ -19,7 +19,7 @@ public:
 	/*! User defined symbols for scalars*/
     std::unordered_set<std::string> m_ss;
     /*! User defined variables containing expressions*/
-    std::unordered_map<std::string, std::unique_ptr<Unit>> m_lv;
+    std::unordered_map<std::string, Unit> m_lv;
 };
 
 #endif // LV_H

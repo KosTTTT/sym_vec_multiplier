@@ -3,12 +3,12 @@
 #include <utility>
 #include <iostream>
 Symbol::Symbol():
-	m_sym()
+    m_sym()
 {}
 
 
 Scalar::Scalar():
-	Symbol()
+    Symbol()
 {
 
 }

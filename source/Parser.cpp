@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <functional>
 #include <future>
+#include <optional>
 
 using namespace std;
 
@@ -18,7 +19,7 @@ Local_vars lv;
 
 namespace
 {
-    void readUnit(std::unique_ptr<Unit>& u, bool allow_new_line = false);
+    void readUnit(std::optional<Unit>& u, bool allow_new_line = false);
     /*check if a symbol was defined elsewhere with the same name*/
     bool cvnwd(std::string const& str);
     //void throwTheVariableWasDefinedError(std::string const & str);
@@ -87,11 +88,11 @@ namespace {
         }
         else if (it01 != lv.m_lv.end())
         {
-            Unit const& u = *(*it01).second;
+            Unit const& u = (*it01).second;
             //we are trying to multiply by another equation
 
             //make a copy
-            std::unique_ptr<Unit>ucopy(new Unit(u));
+            Unit ucopy(u);
             Unit::sum_queue l;
             l.emplace_back(std::move(ucopy));
             unit.multiplyBySum(std::move(l));
@@ -197,8 +198,7 @@ namespace {
                 break;
             }
         }
-        if (str.empty())
-            throw lineCurrent;
+
         return str;
     }
     /*extrants blanks untill a character apperars then  puts it back or throws if no character found*/
@@ -231,17 +231,15 @@ namespace {
         {
             for (auto const& elPair : lv.m_lv)
             {
-                printu(elPair.first, *elPair.second);
+                printu(elPair.first, elPair.second);
             }
-            return;//exit++
         }
         else
         {
             auto it_found = lv.m_lv.find(strUname);
             if (it_found != lv.m_lv.end())
             {
-                printu((*it_found).first, *(*it_found).second);
-                //exit++
+                printu((*it_found).first, (*it_found).second);
             }
             else
             {
@@ -262,7 +260,7 @@ namespace {
 
 
         //unit is being changed
-        Unit& u = *(*it_found).second;
+        Unit& u = (*it_found).second;
         //get the name of a variable we want group
         waitForVarName();
         auto str_group_var = get_variable();
@@ -363,11 +361,8 @@ namespace {
                 auto it_found = lv.m_lv.find(str);
                 if (it_found != lv.m_lv.end())
                 {
-                    if ((*it_found).second)
-                    {
-                        Unit& u = *(*it_found).second;
+                        Unit& u = (*it_found).second;
                         u.expand();
-                    }
                 }
                 else
                 {
@@ -405,10 +400,11 @@ namespace {
     //reading (5*t + e + 3 - 2*u...) and appending it to the multiple of u
     //where "(" has been already read.
     //u will not be initialized if no normal input could be read
-    void readSumQueue(std::unique_ptr<Unit>& u)
+    //throws if no ")" was hit or if no units were read before ")"
+    void readSumQueue(std::optional<Unit>& u)
     {
-        std::list<unique_ptr<Unit>> main_queue;
-        unique_ptr<Unit>nextToAppend;
+        std::list<Unit> main_queue;
+        std::optional<Unit> nextToAppend;
         bool read_all = false;
         while (read_next_char())
         {
@@ -427,7 +423,8 @@ namespace {
                 readUnit(nextToAppend);
                 if (nextToAppend)
                 {
-                    main_queue.emplace_back(std::move(nextToAppend));
+                    main_queue.emplace_back(std::move(*nextToAppend));
+                    nextToAppend.reset();
                 }
                 else
                 {
@@ -445,13 +442,12 @@ namespace {
             }
             else if (ch == '-')
             {
-                if(nextToAppend)
-                    throw lineCurrent;
                 readUnit(nextToAppend);
                 if (nextToAppend)
                 {
                     nextToAppend->multiplyByNumber(-1);
-                    main_queue.emplace_back(std::move(nextToAppend));
+                    main_queue.emplace_back(std::move(*nextToAppend));
+                    nextToAppend.reset();
                 }
                 else
                 {
@@ -465,36 +461,42 @@ namespace {
         }
         if (read_all)
         {
+            if(main_queue.empty())
+                throw std::string{"empty parenthesis"};//er--
             if (!u)
             {
-                u.reset(new Unit);
+                u = std::make_optional<Unit>();
             }
             u->multiplyBySum(main_queue);
-            return;//++
+            //++
         }
-        throw lineCurrent;
-        //u.reset(nullptr);//error--
+        else
+            throw lineCurrent;//error--
     }
     //reads unit into u. U will not be initialized if no unit could be read.
-    //u might be already initialized with multiples in it, so the method must be able continue to read unit in this case.
+    //u might be already initialized with multiples in it, so the method must be able continue to read unit in this case. U will not be deinitialized in this case.
     //Also if the Unit parameter has already been read with '-' the method continues to read the Unit. It will not read '-' by itself.
     //The method just read a unit without goint to next one, e.g. 2*(1-9*t) + t
     //where t will not be read by this method
-    void readUnit(std::unique_ptr<Unit>& u, bool allow_new_line)
+    void readUnit(std::optional<Unit>& u, bool allow_new_line)
     {
-        bool multiply_was_hit = allow_new_line;
+        bool multiply_was_hit = false;
         while (read_next_char())
         {
             if (ch == '\n')
             {
-                if (multiply_was_hit)
+                if(allow_new_line)
+                {
+                    ++lineCurrent;//continue reading
+                }
+                else if (multiply_was_hit)
                 {
                     ++lineCurrent;//continue reading
                 }
                 else
                 {
                     isfile.putback(ch);
-                    break;//++exit
+                    return;//++exit
                 }
             }
             else if (ch == ' ' || ch == '\r')
@@ -506,7 +508,7 @@ namespace {
                 isfile.putback(ch);
                 auto n = get_number();
                 if(!u)
-                    u.reset(new Unit);
+                    u = std::make_optional<Unit>();
                 u->multiplyByNumber(n);
             }
             else if (ch == '*')
@@ -515,6 +517,8 @@ namespace {
                 {
                     throw std::string{"Two '*' in a row."};//error--
                 }
+                if(allow_new_line)
+                    throw lineCurrent;//er--
                 multiply_was_hit = true;
                 continue;
             }
@@ -524,32 +528,33 @@ namespace {
                 auto str = get_variable();
                 if (!u)
                 {
-                    u.reset(new Unit);
+                    u = std::make_optional<Unit>();
                 }
                 MultiplyBySymbol(str, *u);
             }
             else if (ch == '(')
             {
                 readSumQueue(u);
-                if (!u)
-                    throw lineCurrent;//error--
             }
             else if (ch == ')')//in case this method is called from readSumQueue
             {
                 isfile.putback(ch);
-                break;//++return
+                break;//exit++
             }
             else if (is_plus_minus())
             {
                 isfile.putback(ch);
-                return;//exit++
+                break;//exit++
             }
             else
             {
                 throw lineCurrent;//error--
             }
             multiply_was_hit = false;
+            allow_new_line=false;
         }
+        if(multiply_was_hit)
+            throw lineCurrent;
     }
     /* Is called from the main loop. Creates and adds Unit with the name UnitName to the local variables.
      * The resulting Unit will be like UnitName =  Unit + Unit +...
@@ -560,21 +565,16 @@ namespace {
     {
         //unit to which we will append unit terms
         //e.g. u*4 + 3*r
-        unique_ptr<Unit> umain;
-        unique_ptr<Unit> u_term;
+        std::optional<Unit> umain;
+        std::optional<Unit> u_term;
         if (!beg_symbol.empty())
         {
-            u_term.reset(new Unit);
+            u_term = std::make_optional<Unit>();
             MultiplyBySymbol(beg_symbol, *u_term);
             readUnit(u_term);
-            if (u_term)
-            {
-                umain.reset(new Unit);
-                umain->appendUnit(std::move(*u_term));
-                u_term.reset(nullptr);
-            }
-            else
-                throw lineCurrent;
+            umain = std::make_optional<Unit>();
+            umain->appendUnit(std::move(*u_term));
+            u_term.reset();
         }
 
         while (read_next_char())
@@ -585,25 +585,23 @@ namespace {
                 if (u_term)
                 {
                     if(!umain)
-                        umain.reset(new Unit);
+                        umain = std::make_optional<Unit>();
                     umain->appendUnit(std::move(*u_term));
-                    u_term.reset(nullptr);
+                    u_term.reset();
                 }
                 else
                     throw lineCurrent;
             }
             else if (ch == '-')
             {
-                if(u_term)
-                    throw lineCurrent;
                 readUnit(u_term, true);
                 if (u_term)
                 {
                     u_term->multiplyByNumber(-1);
                     if(!umain)
-                        umain.reset(new Unit);
+                        umain = std::make_optional<Unit>();
                     umain->appendUnit(std::move(*u_term));
-                    u_term.reset(nullptr);
+                    u_term.reset();
                 }
                 else
                     throw lineCurrent;
@@ -615,9 +613,9 @@ namespace {
                 if (u_term)
                 {
                     if(!umain)
-                        umain.reset(new Unit);
+                        umain = std::make_optional<Unit>();
                     umain->appendUnit(std::move(*u_term));
-                    u_term.reset(nullptr);
+                    u_term.reset();
                 }
                 else
                     throw lineCurrent;
@@ -641,7 +639,7 @@ namespace {
             auto it_find = lv.m_lv.find(UnitName);
             if(it_find != lv.m_lv.end())
                 lv.m_lv.erase(it_find);
-            lv.m_lv.insert(std::make_pair(UnitName,std::move(umain)));
+            lv.m_lv.insert(std::make_pair(UnitName,std::move(*umain)));
         }
         else
             throw lineCurrent;//error--
@@ -684,6 +682,7 @@ void handle_input(char const* fileName)
 
                 string str = get_variable();
                 //check if it is a keyword
+
                 if (handleKeyword(str))
                     continue;
                 //it is not a keyword

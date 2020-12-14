@@ -12,7 +12,7 @@ class Symbol
     friend std::ostream& operator<<(std::ostream& out, Symbol const& u);
 public:
     std::string m_sym;
-	Symbol();
+    Symbol();
     explicit Symbol(char const * str):
         m_sym(str)
     {}
@@ -51,7 +51,7 @@ class Scalar :public Symbol
 {
     friend std::ostream& operator<<(std::ostream& out, Scalar const& u);
 public:
-	Scalar();
+    Scalar();
     explicit Scalar(char const * str, unsigned power=1);
     explicit Scalar(std::string const& str, unsigned power = 1);
     explicit Scalar(std::string && str, unsigned power = 1) noexcept;
@@ -65,8 +65,8 @@ public:
     {
         return !(*this == other);
     }
-    /*! Multiply this scalar by other.
-    @return reference to this new value. Must not be called if this->m_sym!=other.m_sym*/
+    /*! Multiply this scalar by other.Must not be called if this->m_sym!=other.m_sym
+    @return reference to this new value. */
     Scalar & multiply(Scalar const & other) noexcept
     {
         m_power+=other.m_power;
@@ -94,6 +94,10 @@ public:
 		m_v1(std::move(v1)),
 		m_v2(std::move(v2))
 	{}
+    Vecdotted(std::string const& v1, std::string const& v2) :
+        m_v1(v1),
+        m_v2(v2)
+    {}
     Vecdotted(char const * v1, char const* v2) :
 		m_v1(v1),
 		m_v2(v2)

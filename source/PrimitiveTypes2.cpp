@@ -8,15 +8,14 @@
 using namespace std;
 
 
-void Unit::Multiple::copy_arrunitsh(std::list<  sum_queue   >  const& input, std::list<  sum_queue   > & output)
+void Unit::Multiple::append_arrunitsh(sum_product  const& input, sum_product & output)
 {
     for(auto const & sum: input)
     {
         sum_queue s;
         for(auto const & u: sum)
         {
-            if(u)
-                s.emplace_back(new Unit(*u));
+            s.emplace_back(u);
         }
         if (s.empty())
             continue;
@@ -47,20 +46,24 @@ ScalarGroup& ScalarGroup::multiply(ScalarGroup const& sg)
     {
         *this = sg;
     }
+    else if(sg.isZero())
+    {
+        setZero();
+    }
+    else if(isZero() || sg.isOne())
+    {
+        return *this;
+    }
     else if(isMinusOne())
     {
         *this = sg;
         m_multiple = -m_multiple;
     }
-    else if(sg.isZero())
-    {
-        setZero();
-    }
     else if(sg.isMinusOne())
     {
         m_multiple = -m_multiple;
     }
-    else if(!sg.isOne() && !isZero())
+    else
     {
         m_multiple *= sg.m_multiple;
 
@@ -105,10 +108,11 @@ static bool hf(std::vector<Scalar> const& arthis, std::vector<Scalar> const& aro
     if (sc_size != arthis.size())
         return false;
     auto const m_arrScalar_end = arthis.end();
+    auto const it_begin = arthis.begin();
     for (size_t i = 0; i < sc_size; ++i)
     {
         //if symbol is not found we cannot add them
-        auto it_found = std::find(arthis.begin(), m_arrScalar_end, arother[i]);
+        auto it_found = std::find(it_begin, m_arrScalar_end, arother[i]);
         if (it_found == m_arrScalar_end)
             return false;//--
     }
@@ -120,11 +124,16 @@ static bool hf2(std::vector<Vecdotted> const& arthis, std::vector<Vecdotted> con
     //размеры должны совпадать
     if (sc_size != arthis.size())
         return false;
+
+    auto const tb = arthis.begin();
+    auto const te = arthis.end();
+    auto const ob = arother.begin();
+    auto const oe = arother.end();
     for (size_t i = 0; i < sc_size; ++i)
     {
         //check if the number of symbol occurrence is the same
-        if (std::count(arthis.begin(), arthis.end(), arother[i])
-            != std::count(arother.begin(), arother.end(), arother[i]))
+        if (std::count(tb, te, arother[i])
+            != std::count(ob, oe, arother[i]))
         {
             return false;//--
         }
@@ -223,21 +232,36 @@ void Unit::multiplyBySum(sum_queue && l)
 }
 void Unit::expand()
 {
-	
-
 	if (m_expanded)
 		return;//++
 
 	//+++handle base case
-	if (m_s.empty() && m_m && m_m->m_arrUnits.empty())
+    if (m_s.empty())
 	{
-		m_expanded = true;
-		return;//+++
+        if(m_m)
+        {
+            if(m_m->m_arrUnits.empty())
+            {
+                #ifdef DEBUG_BUILD
+                if(!m_m->m_sg && !m_m->m_vec)
+                    throw std::logic_error{"Logic error empty multiple."};
+                #endif
+
+                m_expanded = true;
+                return;//+++
+            }
+        }
+        #ifdef DEBUG_BUILD
+        else
+        {
+            throw std::logic_error{"Logic error empty multiple."};
+        }
+        #endif
 	}
 	//+++++++++++++++++++
 
 
-	//handle not a base case
+    //handle not a base case. Either m_s is not empty or m_arrUnits in a multiple
 
 	//sum from multiple 
 	sum_queue sm = moveMultipleq();
@@ -250,16 +274,14 @@ void Unit::expand()
 
 	//expand each term of m_s
 	sum_queue ms_expanded;
-	auto const endms = m_s.end();
-	for (auto it2 = m_s.begin(); it2 != endms; ++it2)
+    for (auto &el:m_s)
 	{
-        if(*it2)
-            ms_expanded.splice(ms_expanded.end(), expand_move(*it2));
+        ms_expanded.splice(ms_expanded.end(), expand_move(el));
 	}
 	m_s.clear();
 #ifdef DEBUG_BUILD
 	if (ms_expanded.empty() && sm.empty())
-        std::cerr<<"error during the expansion. ms_expanded.empty() && sm.empty()";
+        throw std::logic_error{"error during the expansion. ms_expanded.empty() && sm.empty()"};
 #endif
 	if (ms_expanded.empty() && !sm.empty())
 	{
@@ -271,70 +293,64 @@ void Unit::expand()
 	}
 	else
 	{
-
-        for(auto const & it1: sm)
+        for(auto const & el: sm)
         {
-            if(it1 && it1->m_m)
-            {
-                for(auto const & it3: ms_expanded)
+                for(auto const & el3: ms_expanded)
                 {
-                    if(it3 && it3->m_m)
-                    {
-                        std::unique_ptr<Unit> u(new Unit);
-                        u->m_expanded = true;
-                        u->m_m.emplace(*it1->m_m);
-                        u->m_m->multiply(*it3->m_m);
+                        Unit u;
+                        u.m_expanded = true;
+                        u.m_m.emplace(*el.m_m);
+                        u.m_m->multiply(*el3.m_m);
                         m_s.emplace_back(std::move(u));
-                    }
-#ifdef DEBUG_BUILD
-                    else
-                        std::cerr<<"error if(it3 && it3->m_m)";
-#endif
                 }
-            }
-#ifdef DEBUG_BUILD
-            else
-                std::cerr<<"error if(it1 && it1->m_m)";
-#endif
+
         }
-		//+++
 	}
 	Unit::hmta(m_s);
     m_expanded = true;
+    //m_s has Units in it
 	Unit::hmfe(*this);
 }
-std::unique_ptr<Unit> Unit::moveMultiple()
+bool Unit::moveMultiple(Unit & u)
 {
 	if (!m_m)
-		return nullptr;
-	unique_ptr<Unit> u(new Unit);
+        return false;
+
+#ifdef DEBUG_BUILD
+    if(m_m->m_arrUnits.empty() && !m_m->m_sg && !m_m->m_vec)
+        throw std::logic_error{"logic error. All elements in a multiple are zero"};
+#endif
+
+
 	if (m_m->isZero())//don't need to open brackets if multiple is zero
 	{
-        u->m_m.emplace(0);
+        u.m_m.emplace(0);
+        u.m_expanded = true;
 	}
 	//if there are no Unit multipliers in the multiple, e.g. 5*a and not 5*a*(b+1), 
 	//no need to open brackets
 	else if (m_m->m_arrUnits.empty())
 	{
-        u->m_m.emplace(std::move(*m_m));
+        u.m_m.emplace(std::move(*m_m));
+        u.m_expanded = true;
 	}
 	else
 	{
 
-        u->m_m = std::make_optional<Multiple>();
+        u.m_m = std::make_optional<Multiple>();
 		//multiple is not zero and is not simple. It might be like
 		//...*(...)*(...+...+...)
 
 		//prepare the multiple
-		u->m_m->m_vec = std::move(m_m->m_vec);
-        u->m_m->m_sg = std::move(m_m->m_sg);
+        u.m_m->m_vec = std::move(m_m->m_vec);
+        u.m_m->m_sg = std::move(m_m->m_sg);
 		//we will multiply and add everything to this new u variable. 
-        if(!u->m_m->m_vec && !u->m_m->m_sg)
+        if(!u.m_m->m_vec && !u.m_m->m_sg)
         {
-            u->m_m->m_sg.emplace(1);
+            u.m_m->m_sg.emplace(1);
         }
-		auto const it_lmEnd = m_m->m_arrUnits.end();
-		for (auto it_lmnext = m_m->m_arrUnits.begin(); it_lmnext != it_lmEnd; ++it_lmnext)
+        u.m_expanded = true;
+        for (auto it_lmnext = m_m->m_arrUnits.begin(),it_lmEnd = m_m->m_arrUnits.end(); it_lmnext != it_lmEnd; ++it_lmnext)
         {
 			//expand each term of *it_lmnext
 
@@ -344,48 +360,41 @@ std::unique_ptr<Unit> Unit::moveMultiple()
             auto sumsBegin = (*it_lmnext).begin();
             for (auto it_unext = sumsBegin; it_unext != sumsEnd; ++it_unext)
             {
-                if(*it_unext)
-                {
                     //expand unit
-                    (*it_unext)->expand();
-                }
+                it_unext->expand();
             }
 
 			//sum them up in the first one
 			if (sumsBegin != sumsEnd)
             {
-                if(*sumsBegin)
-                {
                     for (auto it_next = ++(*it_lmnext).begin(); it_next != sumsEnd; ++it_next)
                     {
-                        if(*it_next)
-                            (*sumsBegin)->sum(**it_next);
+                        sumsBegin->sum(*it_next);
                     }
                     //now multiply *sumsBegin by u
 
-                    u->multiply(**sumsBegin);
+                    u.multiply(*sumsBegin);
                     (*it_lmnext).clear();
-                }
             }
 		}
     }
     m_m.reset();
-    u->expand();
-    return u;
+    return true;
 }
 Unit::sum_queue Unit::moveMultipleq()
 {
 	sum_queue sm;
-	unique_ptr<Unit> m = moveMultiple();
-	if (m)
+    Unit m;
+    bool b =moveMultiple(m);
+    if (b)
 	{
-		if (m->m_s.empty())
+        if (m.m_s.empty())
 		{
-			sm.emplace_back(std::move(m));
+            sm.emplace_back(std::move(m));
 		}
 		else
 		{
-            sm =std::move(m->m_s);
+            sm =std::move(m.m_s);
 		}
 	}
 	return sm;
@@ -400,37 +409,32 @@ bool Unit::Multiple::isMinusOne() const noexcept
     return m_arrUnits.empty() && !m_vec && m_sg && m_sg->isMinusOne();
 }
 //--
-Unit::sum_queue Unit::expand_move(std::unique_ptr<Unit>& UnitChild)
+Unit::sum_queue Unit::expand_move(Unit& UnitChild)
 {
-	sum_queue ret;
-    UnitChild->expand();
+    sum_queue ret;
+    UnitChild.expand();
 
-    if (UnitChild->m_m)
+    if (UnitChild.m_m)
     {
         ret.emplace_back(std::move(UnitChild));
     }
     else
     {
-#ifdef DEBUG_BUILD
-
-        if(UnitChild->m_s.empty())
-            std::cerr<<"error in Unit::sum_queue Unit::expand_move(Unit& UnitChild). UnitChild.m_s.empty()";
-#endif
-        ret = std::move(UnitChild->m_s);
-        UnitChild.reset(nullptr);
+        ret = std::move(UnitChild.m_s);
     }
-	return ret;
+    return ret;
 }
 
 void Unit::sum(Unit const & upar)
 {
-    auto u = std::make_unique<Unit>(upar);
+    Unit u(upar);
 
 
-	u->expand();
+    u.expand();
 	expand();
 
-	if (u->m_m && u->m_m->isZero())
+
+    if (u.m_m && u.m_m->isZero())
 	{
 		//do nothing 
 		return;//++
@@ -439,62 +443,44 @@ void Unit::sum(Unit const & upar)
 	{
 		//replace this Unit with another one
 
-        this->swap(*u);
+        this->swap(u);
 		return;//++
 	}
 	//two units are not zero
 
 	bool const thisempty = m_s.empty();
-	bool const otherempty = u->m_s.empty();
+    bool const otherempty = u.m_s.empty();
 	if (thisempty && otherempty)
 	{
-#ifdef DEBUG_BUILD
-        if(!m_m || !u->m_m)
-        {
-            throw std::logic_error("logic error in void Unit::sum(Unit const & upar) -> if(!m_m || !u->m_m)");
-        }
-#endif
-
 		//just add multiples together
-        if (m_m->canbeadded(*u->m_m))
+        if (m_m->addif(*u.m_m))
 		{
-            m_m->add(*u->m_m);
-			return;//++
+            return;//++
 		}
 		else
 		{
 			//they are terms which cannot be added together
 			//move them to the list of terms
 
-			m_s.emplace_back(moveMultiple());
+            Unit utmp;
+            moveMultiple(utmp);
+            m_s.emplace_back(std::move(utmp));
 			m_s.emplace_back(std::move(u));
 			return;// ++
 		}
 	}
 	else if(thisempty && !otherempty)
 	{
-#ifdef DEBUG_BUILD
-        if(u->m_m || !m_m)
-        {
-            throw std::logic_error("logic error in void Unit::sum(Unit const & upar) -> if(u->m_m || !m_m)");
-        }
-#endif
-
-        m_s.emplace_back(moveMultiple());
-        m_s.splice(m_s.end(), u->m_s);
+        Unit utmp;
+        moveMultiple(utmp);
+        m_s.emplace_back(std::move(utmp));
+        m_s.splice(m_s.end(), u.m_s);
         Unit::hmta(m_s);
 		Unit::hmfe(*this);
 		return;//++
 	}
 	else if (!thisempty && otherempty)
 	{
-#ifdef DEBUG_BUILD
-        if(m_m || !u->m_m)
-        {
-            throw std::logic_error("logic error in void Unit::sum(Unit const & upar) -> if(m_m || !u->m_m)");
-        }
-#endif
-
         m_s.emplace_back(std::move(u));
         Unit::hmta(m_s);
 		Unit::hmfe(*this);
@@ -502,18 +488,11 @@ void Unit::sum(Unit const & upar)
 	}
 	else
 	{
-#ifdef DEBUG_BUILD
-        if(m_m || u->m_m)
-        {
-            throw std::logic_error("logic error in void Unit::sum(Unit const & upar) -> if(m_m || u->m_m)");
-        }
-#endif
-
 		//!thisempty && !otherempty
 
-		//try to add terms from both units together
+        //try to add terms from both units together
 
-        m_s.splice(m_s.end(), u->m_s);
+        m_s.splice(m_s.end(), u.m_s);
         Unit::hmta(m_s);
         Unit::hmfe(*this);
 		return;//++
@@ -522,11 +501,11 @@ void Unit::sum(Unit const & upar)
 
 void Unit::multiply(Unit const& upar)
 {
-    auto u = std::make_unique<Unit>(upar);
+    Unit u(upar);
 
 
 
-	u->expand();
+    u.expand();
 	expand();
 
 
@@ -534,95 +513,55 @@ void Unit::multiply(Unit const& upar)
 	{
 		return;//++
 	}
-	if (u->m_m && u->m_m->isZero())
+    if (u.m_m && u.m_m->isZero())
 	{
 		setZero();
 		return;//++
 	}
 
+
     //two units are not zero
 
 	bool const thisempty = m_s.empty();
-	bool const otherempty = u->m_s.empty();
+    bool const otherempty = u.m_s.empty();
 	if (thisempty && otherempty)
 	{
-#ifdef DEBUG_BUILD
-        if(!m_m || !u->m_m)
-        {
-            throw std::logic_error("logic error in void void Unit::multiply(Unit const& upar) -> if(!m_m || !u->m_m)");
-        }
-#endif
-
 		//multiply multiples together
-		m_m->multiply(*u->m_m);
+        m_m->multiply(*u.m_m);
         //++
 	}
 	else if (thisempty && !otherempty)
 	{
-
-#ifdef DEBUG_BUILD
-        if(u->m_m || !m_m)
+        m_s = std::move(u.m_s);
+        for(auto & el: m_s)
         {
-            throw std::logic_error("logic error in void void Unit::multiply(Unit const& upar) -> if(u->m_m || !m_m)");
-        }
-#endif
-
-        m_s = std::move(u->m_s);
-        for(auto & uptr: m_s)
-        {
-            if(uptr && uptr->m_m)
-            {
-                uptr->m_m->multiply(*m_m);
-            }
+            el.m_m->multiply(*m_m);
         }
         m_m.reset();
         //++
 	}
 	else if (!thisempty && otherempty)
 	{
-#ifdef DEBUG_BUILD
-        if(m_m || !u->m_m)
+        for(auto & u: m_s)
         {
-            throw std::logic_error("logic error in void Unit::multiply(Unit const & upar) -> if(m_m || !u->m_m)");
-        }
-#endif
-
-        for(auto & ptr: m_s)
-        {
-            if(ptr && ptr->m_m)
-            {
-                ptr->m_m->multiply(*u->m_m);
-            }
+            u.m_m->multiply(*u.m_m);
         }
         //++
 	}
 	else
 	{
-#ifdef DEBUG_BUILD
-        if(m_m || u->m_m)
-        {
-            throw std::logic_error("logic error in void Unit::multiply(Unit const & upar) -> if(m_m || u->m_m)");
-        }
-#endif
-
 		//!thisempty && !otherempty
 
         sum_queue result;
 
         for(auto & f: m_s)
         {
-            if(f && f->m_m)
-            {
-                for(auto & s: u->m_s)
+                for(auto & s: u.m_s)
                 {
-                    if(s && s->m_m)
-                    {
-                        auto unew = std::make_unique<Unit>(*f);
-                        unew->m_m->multiply(*s->m_m);
+                        Unit unew(f);
+                        unew.m_m->multiply(*s.m_m);
                         result.emplace_back(std::move(unew));
-                    }
                 }
-            }
         }
 		m_s = std::move(result);
 		hmta(m_s);
@@ -703,7 +642,82 @@ void Unit::Multiple::add(Multiple const & other)
     if(m_sg && m_sg->isZero())
         setZero();
 }
+bool Unit::Multiple::addif(Multiple const & other)
+{
 
+    if(isZero())
+    {
+        if(!other.isZero())
+            *this = other;
+        return true;
+    }
+    if(other.isZero())
+        return true;
+
+
+
+    if(m_arrUnits.empty() && other.m_arrUnits.empty())
+    {
+        if(!m_vec && !other.m_vec)
+        {
+            if(m_sg && other.m_sg)
+            {
+                if(m_sg->canBeAdded(*other.m_sg))
+                {
+                    m_sg->add(*other.m_sg);
+                    if(m_sg->isZero())
+                        setZero();
+                    return true;//++
+                }
+            }
+        }
+        else if(m_vec && other.m_vec)
+        {
+            if(*m_vec==*other.m_vec)
+            {
+                if(m_sg && !other.m_sg)
+                {
+                    if(m_sg->m_arrScalar.empty() && m_sg->m_arrVecdotted.empty())
+                    {
+                        m_sg->add(ScalarGroup{1});
+                        if(m_sg->isZero())
+                            setZero();
+                        return true;//++
+                    }
+
+                }
+                else if(!m_sg && other.m_sg)
+                {
+                    if(other.m_sg->m_arrScalar.empty() && other.m_sg->m_arrVecdotted.empty())
+                    {
+                        m_sg.emplace(1);
+                        m_sg->add(*other.m_sg);
+                        if(m_sg->isZero())
+                            setZero();
+                        return true;//++
+                    }
+                }
+                else if(!m_sg && !other.m_sg)
+                {
+                    m_sg.emplace(2);
+                    return true;//++
+                }
+                else if(m_sg && other.m_sg)
+                {
+                    if(m_sg->canBeAdded(*other.m_sg))
+                    {
+                        m_sg->add(*other.m_sg);
+                        if(m_sg->isZero())
+                            setZero();
+                        return true;//++
+                    }
+                }
+            }
+        }
+    }
+
+    return false;
+}
 
 
 void Unit::Multiple::multiply(Multiple const & other)
@@ -729,7 +743,7 @@ void Unit::Multiple::multiply(Multiple const & other)
         m_vec.emplace(*other.m_vec);
 	}
 
-    copy_arrunitsh(other.m_arrUnits,m_arrUnits);
+    append_arrunitsh(other.m_arrUnits,m_arrUnits);
 
     if(other.m_sg && m_sg)
     {
@@ -739,16 +753,16 @@ void Unit::Multiple::multiply(Multiple const & other)
     {
         m_sg.emplace(*other.m_sg);
     }
-    //can it be zero after a multiplication of two numbers ?
-    if(m_sg && m_sg->isZero())
-        setZero();
+//    //can it be zero after a multiplication of two numbers ?
+//    if(m_sg && m_sg->isZero())
+//        setZero();
 }
 
 Unit::Multiple::Multiple(Multiple const& other):
     m_sg(other.m_sg),
     m_vec(other.m_vec)
 {
-	copy_arrunits(other.m_arrUnits);
+    append_arrunitsh(other.m_arrUnits,m_arrUnits);
 }
 Unit::Multiple& Unit::Multiple::operator=(Multiple const& other)
 {
@@ -785,11 +799,11 @@ void Unit::Multiple::setZero() noexcept
     m_sg.emplace(0);
     m_vec.reset();
 }
-inline void Unit::Multiple::copy_arrunits(std::list<  sum_queue   >  const& other)
-{
-	m_arrUnits.clear();
-    copy_arrunitsh(other,m_arrUnits);
-}
+//inline void Unit::Multiple::copy_arrunits(sum_product  const& other)
+//{
+//	m_arrUnits.clear();
+//    append_arrunitsh(other,m_arrUnits);
+//}
 
 void Unit::Multiple::swap(Multiple & other) noexcept
 {
@@ -833,106 +847,83 @@ void Unit::hmta(sum_queue & v)
     auto const itb1 = v.begin();
     auto const ite1 = v.end();
 
-    //how much valid multiples
+    //how many Units
     size_t count = 0;
     for (auto it1 = itb1; it1 != ite1; ++it1)
     {
-        if (*it1 && (*it1)->m_m)
-        {
             ++count;
-            if(!(*it1)->m_m->isZero())
+            if(!(*it1).m_m->isZero())
             {
                 auto it2 = it1;
                 ++it2;
                 for (; it2 != ite1; ++it2)
                 {
-                    if (*it2 && (*it2)->m_m)
+                    if(!it2->m_m->isZero())
                     {
-                        if((*it1)->m_m->canbeadded(*(*it2)->m_m))
+                        if((*it1).m_m->addif(*(*it2).m_m))
                         {
-                            (*it1)->m_m->add(*(*it2)->m_m);
-                            (*it2).reset(nullptr);
-                            if((*it1)->m_m->isZero())
-                                break;//not goint to add zero to something else
+                            (*it2).setZero();
+                            if((*it1).m_m->isZero())
+                                break;//not going to add zero to something else
                         }
                     }
                 }
             }
-        }
     }
 //remove zeroes
 
     if(count>1)
     {
-        for (auto it1 = itb1; it1 != ite1; ++it1)
+        for (auto it1 = itb1; it1 != ite1;)
         {
-            if (*it1 && (*it1)->m_m && (*it1)->m_m->isZero())
+            if ((*it1).m_m->isZero())
             {
-                it1->reset(nullptr);
+                auto ittmp = it1;
+                ++it1;
+                v.erase(ittmp);
                 --count;
                 if(count==1)
                     break;
             }
+            else
+                ++it1;
         }
     }
-
-
-
-
-    v.remove_if([](std::unique_ptr<Unit> const &el)->bool
-               {
-                return !el;
-                });
 }
 void Unit::hmfe(Unit& u)
 {
-	if (u.m_s.empty())
-	{
-        throw std::logic_error{"logic error in hmfe(Unit& u)->if (u.m_s.empty())"};
-        //return;
-	}
-	auto next = ++u.m_s.begin();
-	if (next == u.m_s.end())
-	{
-		//there is only one unit in m_s. Move it to multiple
-
-        auto &ptr = u.m_s.front();
-        if(ptr)
+    auto next = ++u.m_s.begin();
+        if (next == u.m_s.end())
         {
-            if(!ptr->m_m)
-                throw std::logic_error{"logic error in hmfe(Unit& u)->if(!ptr->m_m)"};
-            u.m_m=std::move(ptr->m_m);
+            //there is only one unit in m_s. Move it to multiple
+
+            auto &el = u.m_s.front();
+            u.m_m=std::move(el.m_m);
             u.m_s.clear();//++
         }
-        else
-        {
-            throw std::logic_error{"logic error in hmfe(Unit& u)"};
-        }
-	}
 }
 void Unit::append_sum_queue(sum_queue const & source, sum_queue & dest)
 {
     for(auto const & u:source)
     {
-        if(u)
-            dest.emplace_back(new Unit(*u));//copy Unit
+        dest.emplace_back(u);//copy Unit
     }
 }
 
 void Unit::appendUnit(Unit const& u)
 {
-    Unit unew{u};
-    appendUnit(std::move(unew));
+    m_s.emplace_back(u);
+    m_expanded = false;
 }
 void Unit::appendUnit(Unit && u)
 {
-    m_s.emplace_back(new Unit{std::move(u)});
+    m_s.emplace_back(std::move(u));
     m_expanded = false;
 }
 void Unit::group(std::string const& str)
 {
 	expand();
-	
+
 	//the unit either a simple multiple or the multiple is one and it has a list or terms like 5*a + 2*b etc.
 
 	if (m_s.empty())
@@ -945,11 +936,7 @@ void Unit::group(std::string const& str)
 		auto it_ret = it_end;
 		for (auto it_next = m_s.begin(); it_next != it_end; ++it_next)
 		{
-			if (*it_next)
-			{
-				Unit const& u = **it_next;
-                if (u.m_m )
-				{
+                Unit const& u = *it_next;
 					if (u.m_m->m_vec)
 					{
 						if (u.m_m->m_vec->m_sym == str)
@@ -957,8 +944,6 @@ void Unit::group(std::string const& str)
 							return it_next;
 						}
 					}
-				}
-			}
 		}
 		return it_ret;
 	};
@@ -969,15 +954,15 @@ void Unit::group(std::string const& str)
 		auto p = h_fsm(str);
 		if (p.first != m_s.end())
 		{
-			std::unique_ptr<Unit> u = std::move(*p.first);
+            Unit u = std::move(*p.first);
 			auto it_next = p.first;
 			++it_next;
 			m_s.erase(p.first);
 
 			//a unit like t*(a+b+d)
-			std::unique_ptr<Unit> unew(new Unit);
-            unew->multiplyByScalar(*p.second);
-			u->m_m->m_sg->m_arrScalar.erase(p.second);
+            Unit unew;
+            unew.multiplyByScalar(*p.second);
+            u.m_m->m_sg->m_arrScalar.erase(p.second);
 			//fill ms with units without the common multiple
 			sum_queue ms;
 			ms.emplace_back(std::move(u));
@@ -987,13 +972,11 @@ void Unit::group(std::string const& str)
 			{
 				auto it_tmp = it_next;
 				++it_tmp;
-                if(*it_next)
-                {
-                    Unit& u = **it_next;
-                    if (u.m_m && u.m_m->m_sg)
+                    Unit& u = *it_next;
+                    if (u.m_m->m_sg)
                     {
                         auto it_end2 = u.m_m->m_sg->m_arrScalar.end();
-                        auto it_found = std::find(u.m_m->m_sg->m_arrScalar.begin(), it_end2, unew->m_m->m_sg->m_arrScalar.front());
+                        auto it_found = std::find(u.m_m->m_sg->m_arrScalar.begin(), it_end2, unew.m_m->m_sg->m_arrScalar.front());
                         if (it_found != it_end2)
                         {
                             u.m_m->m_sg->m_arrScalar.erase(it_found);
@@ -1001,11 +984,10 @@ void Unit::group(std::string const& str)
                             m_s.erase(it_next);
                         }
                     }
-                }
 				it_next = it_tmp;
 			}
 
-            unew->multiplyBySum(std::move(ms));
+            unew.multiplyBySum(std::move(ms));
 			msnew.emplace_back(std::move(unew));
 		}
 		else
@@ -1015,13 +997,13 @@ void Unit::group(std::string const& str)
 			if (pv != m_s.end())
 			{
 				//a unit e.g. v(a+b+c*d) we will append to msnew
-				std::unique_ptr<Unit> unew(new Unit);
-				std::unique_ptr<Unit>& u = *pv;
-				Vec& v = *u->m_m->m_vec;
-                unew->m_m.emplace(v);
-                u->m_m->m_vec.reset();
-                if(!u->m_m->m_sg)
-                    u->m_m->m_sg.emplace(1);
+                Unit unew;
+                Unit& u = *pv;
+                Vec& v = *u.m_m->m_vec;
+                unew.m_m.emplace(v);
+                u.m_m->m_vec.reset();
+                if(!u.m_m->m_sg)
+                    u.m_m->m_sg.emplace(1);
 				auto it_next = pv;
 				++it_next;
 				sum_queue sum;
@@ -1033,14 +1015,10 @@ void Unit::group(std::string const& str)
 				{
 					auto it_tmp = it_next;
 					++it_tmp;
-                    if(*it_next)
-                    {
-                        Unit& unext = **it_next;
-                        if (unext.m_m)
-                        {
+                        Unit& unext = *it_next;
                             if (unext.m_m->m_vec)
                             {
-                                if (*unext.m_m->m_vec == *unew->m_m->m_vec)
+                                if (*unext.m_m->m_vec == *unew.m_m->m_vec)
                                 {
                                     unext.m_m->m_vec.reset();
                                     if(!unext.m_m->m_sg)
@@ -1049,11 +1027,9 @@ void Unit::group(std::string const& str)
                                     m_s.erase(it_next);
                                 }
                             }
-                        }
-                    }
 					it_next = it_tmp;
 				}
-				unew->multiplyBySum(sum);
+                unew.multiplyBySum(sum);
 				msnew.emplace_back(std::move(unew));
 				break;//++exit
 			}
@@ -1074,31 +1050,25 @@ std::ostream& operator<<(std::ostream& out, Unit const& u)
     {
         //print the first unit
         auto it_begin = sum.begin();
-        if(*it_begin)
-        {
-            out << **it_begin;
-        }
+        out << *it_begin;
             //print others
         for (auto it = ++it_begin, end = sum.end(); it != end; ++it)
         {
-            if (*it)
-            {
                 //if ((*it)->m_m && (*it)->m_m->isZero())
                 //    continue;
 
                 //**decide put "+" or not
-                if ((*it)->m_m && (*it)->m_m->m_sg)
+                if ((*it).m_m && (*it).m_m->m_sg)
                 {
-                    if ((*it)->m_m->m_sg->multiple() < 0)
+                    if ((*it).m_m->m_sg->multiple() < 0)
                     {
-                        out << **it;
+                        out << *it;
                         continue;
                     }
                 }
                 //**
                 out << '+';
-                out << **it;
-            }
+                out << *it;
         }
     };
 	//return out<<L"test";
@@ -1279,10 +1249,8 @@ auto Unit::h_fsm(std::string const& str)->std::pair<sum_queue::iterator,decltype
     auto vmax = std::numeric_limits<decltype(Scalar::m_power)>::lowest();
     for (auto it_next = m_s.begin(); it_next != it_end; ++it_next)
     {
-        if (*it_next)
-        {
-            Unit& u = **it_next;
-            if (u.m_m && u.m_m->m_sg)
+            Unit& u = *it_next;
+            if (u.m_m->m_sg)
             {
                 auto const it_end02 = u.m_m->m_sg->m_arrScalar.end();
                 for (auto it02 = u.m_m->m_sg->m_arrScalar.begin(); it02 != it_end02; ++it02)
@@ -1299,7 +1267,6 @@ auto Unit::h_fsm(std::string const& str)->std::pair<sum_queue::iterator,decltype
                     }
                 }
             }
-        }
     }
     return std::make_pair(it_ret1, it_ret2);//++
 };

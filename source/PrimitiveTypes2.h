@@ -66,8 +66,8 @@ public:
     void AssignMultipe(Settings::type_real m);
     /*! Multiply by a Scalar*/
     void MultByScalar(Scalar const & sc);
-    /*! Append a dot product of two vectors.*/
 
+    /*! Append a dot product of two vectors.*/
     template<typename ...Params>
     void MultByVecdotted(Params && ...params)
 	{
@@ -85,18 +85,22 @@ public:
     void swap(ScalarGroup & other) noexcept;
 };
 
-/*! This class can represent a whole expression, e.g. 5*(a*b*(5*r + 3)*(1+7*a) + a*r)
+/*!
+ * This class can represent a whole expression, e.g. 5*(a*b*(5*r + 3)*(1+7*a) + a*r)
 */
 class Unit
 {
 
 public:
-    using sum_queue = std::list<std::unique_ptr<Unit>>;
+    using sum_queue = std::list<Unit>;
+    using sum_product = std::vector<sum_queue>;
 private:
     /*multiple of the gobal sum of units */
     class Multiple
     {
         friend class Unit;
+        friend std::ostream& operator<<(std::ostream& out, Unit const& u);
+        friend std::ostream& operator<<(std::ostream& out, ScalarGroup const& u);
         std::optional<ScalarGroup> m_sg;//scalar multiple
         std::optional<Vec> m_vec;//vector multiple
 
@@ -105,9 +109,9 @@ private:
         where (5*a + r) is the first element of the list
         (3*u) is the second
         */
-        std::list<  sum_queue   > m_arrUnits;
+        sum_product m_arrUnits;
 
-        friend std::ostream& operator<<(std::ostream& out, Unit const& u);
+
     public:
         Multiple(){}
         Multiple(Settings::type_real v) :
@@ -119,9 +123,9 @@ private:
         explicit Multiple(Vec const& vec) :
             m_vec(vec)
         {}
-        Multiple(std::list<  sum_queue   > const& list)
+        Multiple(sum_product const& list)
         {
-            copy_arrunitsh(list,m_arrUnits);
+            append_arrunitsh(list,m_arrUnits);
         }
         Multiple(Multiple const& other);
         Multiple& operator=(Multiple const& other);
@@ -142,12 +146,14 @@ private:
         bool canbeadded(Multiple const& mother) const;
         /*! Call it only if bool canbeadded(Multiple const& mother) const; returns true*/
         void add(Multiple const & other);
+        /*! canbeadded + add*/
+        bool addif(Multiple const & other);
         /*multiplies other to this*/
         void multiply(Multiple const& other);
         void swap(Multiple & other) noexcept;
 
-        void copy_arrunits(std::list<  sum_queue   >  const& other);
-        static void copy_arrunitsh(std::list<  sum_queue   >  const& input, std::list<  sum_queue   > & output);
+        //void copy_arrunits(sum_product  const& other);
+        static void append_arrunitsh(sum_product  const& input, sum_product & output);
 
     };
 
@@ -175,7 +181,9 @@ public:
 	Unit(Unit && other) noexcept;
 	Unit& operator=(Unit && other) noexcept;
 
-    /*! Multiply the Unit by Vec + */
+    /*!
+     * Multiply the Unit by Vec
+    */
 	template <typename T>
 	void multiplyByVec(T&& vec)
 	{
@@ -189,6 +197,20 @@ public:
             m_m->multiply(mtmp);
 		}
 	}
+    /*! Multiply this Unit by an array of Unit sums.The unit becomes not expanded.
+     */
+    void multiplyBySum(sum_queue const & l);
+    void multiplyBySum(sum_queue && l);
+
+    /*!  */
+    void multiplyByScalar(Scalar const& arg);
+    /*!  */
+    void multiplyByNumber(Settings::type_real const & arg);
+    /*!
+     * Appends the Unit to be in the list of the sum of Units. The unit becomes not expanded.
+    */
+    void appendUnit(Unit const& u);
+    void appendUnit(Unit && u);
 	/*! 
     Multiplies everything together so that there will be either a simple multiple( without parentheses )
     or sum of Units each of which has only simple multiples.
@@ -201,19 +223,6 @@ public:
     /*! Multiplies this Unit to argument. Argument and this Unit will be expanded.
      */
     void multiply(Unit const & u);
-    /*! Multiply this Unit by an array of Unit sums.The unit becomes not expanded.
-     */
-    void multiplyBySum(sum_queue const & l);
-    void multiplyBySum(sum_queue && l);
-
-    /*!  */
-    void multiplyByScalar(Scalar const& arg);
-    /*!  */
-    void multiplyByNumber(Settings::type_real const & arg);
-    /*!Appends the Unit to be in the list of the sum of Units. The unit becomes not expanded.
-    */
-    void appendUnit(Unit const& u);
-    void appendUnit(Unit && u);
 	/*!
     Group Units together if they have common multiple symbol str.
     E.g. if Unit is x*t + a*t ,
@@ -240,21 +249,21 @@ private:
 	tries to add everything together,if a unit can be added it is removed and is added to another Unit in the array, 
     */
 	static void hmta(sum_queue &v);
-    /*If an Unit has a single term it is moved to a multiple. It is assumed that the parameter is expanded
+    /*If an Unit has a single term it is moved to a multiple. It is assumed that the argument is expanded and has Units in m_s
     */
 	static void hmfe(Unit & u);
-	/*units which sum together*/
+    /*units which sum together*/
 
     /* Parameter UnitChild must be not null.
     This method expands an argument,
     and returns a list of expanded Units with only one simple multiple.
     An object UnitChild will be destroyed
     */
-    static sum_queue expand_move(std::unique_ptr<Unit> & UnitChild);
+    static sum_queue expand_move(Unit & UnitChild);
     /* Turns multiple of this unit to an expanded Unit and returns it. Multiple of this object will be destroyed.
     If the Unit had not multiple returns nullptr
     */
-	std::unique_ptr<Unit> moveMultiple();
+    bool moveMultiple(Unit & ret);
     /* Turns multiple of this unit to an array of expanded Units. Multiple of this object is destroyed.
     Return array will be empty if the Unit does not have a multiple
     */
@@ -268,7 +277,7 @@ private:
     auto h_fsm(std::string const& str)->std::pair<sum_queue::iterator,decltype(ScalarGroup::m_arrScalar)::iterator>;
 
 };
-//-
+//+
 std::ostream& operator<<(std::ostream& out, Unit const& u);
 //+
 std::ostream& operator<<(std::ostream& out, ScalarGroup const& u);
