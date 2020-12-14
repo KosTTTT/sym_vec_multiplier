@@ -136,10 +136,6 @@ namespace {
     {
         return ch >= '0' && ch <= '9';
     }
-    inline bool is_operator()
-    {
-        return ch == '+' || ch == '-' || ch == '*';
-    }
     inline bool is_var_start()
     {
         return is_character();// || ch=='_';
@@ -467,7 +463,7 @@ namespace {
             {
                 u = std::make_optional<Unit>();
             }
-            u->multiplyBySum(main_queue);
+            u->multiplyBySum(std::move(main_queue));
             //++
         }
         else
