@@ -369,7 +369,7 @@ bool Unit::moveMultiple(Unit & u)
             {
                     for (auto it_next = ++(*it_lmnext).begin(); it_next != sumsEnd; ++it_next)
                     {
-                        sumsBegin->sum(*it_next);
+                        sumsBegin->sum(std::move(*it_next));
                     }
                     //now multiply *sumsBegin by u
 
@@ -425,11 +425,13 @@ Unit::sum_queue Unit::expand_move(Unit& UnitChild)
     return ret;
 }
 
-void Unit::sum(Unit const & upar)
+void Unit::sum(Unit const& u)
 {
-    Unit u(upar);
-
-
+    Unit utmp(u);
+    sum(std::move(utmp));
+}
+void Unit::sum(Unit && u)
+{
     u.expand();
 	expand();
 

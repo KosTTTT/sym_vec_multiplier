@@ -220,6 +220,7 @@ public:
     /*! Adds parameter to this Unit and expands it.
      */
     void sum(Unit const & u);
+    void sum(Unit && u);
     /*! Multiplies this Unit to argument. Argument and this Unit will be expanded.
      */
     void multiply(Unit const & u);
