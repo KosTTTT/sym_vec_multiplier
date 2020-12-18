@@ -7,7 +7,7 @@ The following is an example of an ASCII file.
 #define symbolic scalar variables
 syms a,b
 ytmp = a+b
-y = ytmp*ytmp
+y = ytmp*(a+b)
 #open parentheses
 expand y
 #print to a text file with the name "y"
