@@ -41,7 +41,10 @@ namespace {
     {
         return 	ch == '+' || ch == '-';
     }
-
+    inline bool is_blank()
+    {
+        return ch==' ' || ch=='\r' || ch=='\t';
+    }
     Settings::type_real get_number()
     {
         Settings::type_real t;
@@ -147,7 +150,7 @@ namespace {
     {
         while (read_next_char())
         {
-            if (ch == ' ' || ch == '\r')
+            if (is_blank())
                 continue;
             else if (ch == '=')
                 return true;//++
@@ -209,7 +212,7 @@ namespace {
                 bfound = true;
                 break;//++
             }
-            else if (ch == ' ')
+            else if (is_blank())
                 continue;
             else
                 throw lineCurrent;//--
@@ -287,7 +290,7 @@ namespace {
                         break;//++end
                     }
                 }
-                else if (ch == '\r' || ch == ' ')
+                else if (is_blank())
                 {
                     continue;
                 }
@@ -409,7 +412,7 @@ namespace {
                 read_all = true;
                 break;//++finish reading
             }
-            else if (ch == ' ' || ch == '\r')
+            else if (is_blank())
             {
                 continue;
             }
@@ -495,7 +498,7 @@ namespace {
                     return;//++exit
                 }
             }
-            else if (ch == ' ' || ch == '\r')
+            else if (is_blank())
             {
                 continue;
             }
@@ -621,7 +624,7 @@ namespace {
                 ++lineCurrent;
                 break;
             }
-            else if (ch == ' '||ch=='\r')
+            else if (is_blank())
             {
                 continue;
             }
@@ -651,12 +654,10 @@ void handle_input(char const* fileName)
     {
         while (read_next_char())
         {
-            if (ch == ' ')
+            if (is_blank())
             {
                 continue;
             }
-            else if (ch == '\r')
-                continue;
             else if (ch == '\n')
             {
                 ++lineCurrent;
@@ -697,7 +698,7 @@ void handle_input(char const* fileName)
                     readUnits(newname, str);
                 }
             }
-            else if (is_number() || ch == '(' || '-')
+            else if (is_number() || ch == '(' || ch == '-')
             {
                 isfile.putback(ch);
                 auto newname = generateVName();
