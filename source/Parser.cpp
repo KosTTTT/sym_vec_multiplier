@@ -37,6 +37,8 @@ namespace {
     //next character read from the file
     char ch;
 
+
+
     inline bool is_plus_minus()
     {
         return 	ch == '+' || ch == '-';
@@ -389,6 +391,22 @@ namespace {
                     {
                         lv.m_lv.erase(it_found);
                     }
+                    else
+                    {
+                        auto it_found = lv.m_vs.find(str);
+                        if (it_found != lv.m_vs.end())
+                        {
+                            lv.m_vs.erase(it_found);
+                        }
+                        else
+                        {
+                            auto it_found = lv.m_ss.find(str);
+                            if(it_found!=lv.m_ss.end())
+                            {
+                                lv.m_ss.erase(it_found);
+                            }
+                        }
+                    }
                 }
             };
             hf1(f);
@@ -635,6 +653,22 @@ namespace {
         }
         if (umain)	//add unit to local variables
         {
+            {
+                auto it_find = lv.m_ss.find(UnitName);
+                if(it_find!=lv.m_ss.end())
+                {
+                    throw std::string{"The variable already exists as a scalar."};
+                }
+                else
+                {
+                    auto it_find = lv.m_vs.find(UnitName);
+                    if(it_find!=lv.m_ss.end())
+                    {
+                        throw std::string{"The variable already exists as a vector."};
+                    }
+                }
+            }
+
             auto it_find = lv.m_lv.find(UnitName);
             if(it_find != lv.m_lv.end())
                 lv.m_lv.erase(it_find);
