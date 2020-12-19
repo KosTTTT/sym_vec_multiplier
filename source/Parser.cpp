@@ -265,6 +265,15 @@ namespace {
         //get the name of a variable we want group
         waitForVarName();
         auto str_group_var = get_variable();
+        {
+            auto itfound = lv.m_ss.find(str_group_var);
+            if(itfound==lv.m_ss.end())
+            {
+                auto itfound = lv.m_vs.find(str_group_var);
+                if(itfound==lv.m_vs.end())
+                    throw std::string{"Symbol not found"};
+            }
+        }
         u.group(str_group_var);
     }
     /*handles a keyword input, or returns false if no such keyword defined*/
