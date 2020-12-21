@@ -322,8 +322,9 @@ namespace {
         {
             //define a vector variable symbol
 
-            std::function<void(std::string const& str)> f=
-                [](std::string const & str)
+            //std::function<void(std::string const& str)> f=
+            //    [](std::string const & str)
+            auto f = [](std::string const& str)
             {
                 if (cvnwd(str))
                 {
@@ -342,8 +343,9 @@ namespace {
             //define a scalar variable symbol
             //hf1(lv.m_ss);
 
-            std::function<void(std::string const& str)> f =
-                [](std::string const& str)
+            //std::function<void(std::string const& str)> f =
+            //    [](std::string const& str)
+            auto f = [](std::string const& str)
             {
                 if (cvnwd(str))
                     lv.m_ss.insert(str);
@@ -365,8 +367,9 @@ namespace {
         }
         else if (str == "expand")
         {
-            std::function<void(std::string const& str)> f =
-                [](std::string const& str)
+            //std::function<void(std::string const& str)> f =
+            //    [](std::string const& str)
+            auto f = [](std::string const& str)
             {
                 auto it_found = lv.m_lv.find(str);
                 if (it_found != lv.m_lv.end())
@@ -384,8 +387,9 @@ namespace {
         }
         else if (str == "clear")//erase one, some or all variables from the local variables
         {
-            std::function<void(std::string const& str)> f =
-                [](std::string const& str)
+            //std::function<void(std::string const& str)> f =
+            //    [](std::string const& str)
+            auto f = [](std::string const& str)
             {
                 if (str == "all")
                 {
