@@ -223,10 +223,10 @@ namespace {
             throw lineCurrent;//--
     }
 
-    void haldlePrintKeyWord()
+    void haldlePrintKeyWord(std::string const strUname)
     {
-        waitForVarName();
-        auto strUname = get_variable();
+        //waitForVarName();
+        //auto strUname = get_variable();
 
         if (strUname == "all")
         {
@@ -279,7 +279,7 @@ namespace {
     /*handles a keyword input, or returns false if no such keyword defined*/
     bool handleKeyword(std::string const& str)
     {
-        auto hf1 = [](auto& func)
+        auto hf1 = [](auto const & func)
         {
             waitForVarName();
             auto var = get_variable();
@@ -355,7 +355,7 @@ namespace {
         }
         else if (str == "print")
         {
-            haldlePrintKeyWord();
+            hf1(haldlePrintKeyWord);
             return true;
         }
         else if (str == "group")
