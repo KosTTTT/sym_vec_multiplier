@@ -164,6 +164,23 @@ namespace {
         }
         return false;
     }
+    //waits for a Unit start. If found puts the character back. It not, throws lineCurrent
+    void wait_any()
+    {
+        while(read_next_char())
+        {
+            if(is_plus_minus() || is_var_start() || is_number() || is_character())
+            {
+                isfile.putback(ch);
+                return;//++
+            }
+            else if(is_blank())
+                continue;
+            else
+                break;
+        }
+        throw lineCurrent;//er--
+    }
     /*
     get a variable name from stream. So, the method reads characters from the stream untill there is a whole name of a variable ,e.g. "var_1" of "_var".
     This method must be called only if it is known that there is a variable starting with a legitimate letter comming up.
@@ -721,6 +738,7 @@ void handle_input(char const* fileName)
                 //it might be a declaration of variable, e.g. u = ..
                 if (lfva())
                 {
+                    wait_any();
                     //assign Unit to a variable str
                     readUnits(str);
                     continue;
