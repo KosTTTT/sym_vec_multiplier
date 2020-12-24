@@ -169,7 +169,7 @@ namespace {
     {
         while(read_next_char())
         {
-            if(is_plus_minus() || is_var_start() || is_number() || is_character())
+            if(is_plus_minus() || is_var_start() || is_number() ||ch=='('|| is_character())
             {
                 isfile.putback(ch);
                 return;//++
