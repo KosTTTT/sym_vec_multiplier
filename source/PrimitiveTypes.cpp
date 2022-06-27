@@ -1,47 +1,33 @@
 #include "PrimitiveTypes.h"
-#include "Settings.h"
 #include <utility>
 #include <iostream>
-Symbol::Symbol():
-    m_sym()
-{}
+#include <stdexcept>
+#include <numeric>
 
 
-Scalar::Scalar():
-    Symbol()
+
+
+std::ostream& operator<<(std::ostream& out, Scalar const& u)
 {
-
-}
-Scalar::Scalar(char const* str, unsigned power):
-    Symbol(str),
-    m_power(power)
-{
-
-}
-Scalar::Scalar(std::string const& str, unsigned power):
-    Symbol(str),
-    m_power(power)
-{
-
-}
-Scalar::Scalar(std::string && str, unsigned power) noexcept:
-    Symbol(std::move(str)),
-    m_power(power)
-{
-
+    out << static_cast<Symbol const&>(u);
+    //if the power of scalar equals 1 do not print it. User will assume it is 1
+    if(u.m_power == 1)
+        return out;
+    out<<'^';
+    out<<'(';
+    out<< u.m_power;
+    out<<')';
+    return out;
 }
 
 
-
-
-
-bool Vecdotted::operator == (Vecdotted const& other) const
+bool Vecdotted::operator == (Vecdotted const& other) const noexcept
 {
 	if (m_v1 == other.m_v1)
 	{
 		return m_v2 == other.m_v2;
 	}
-	else if (m_v2 == other.m_v1)
+    else if (m_v2 == other.m_v1)
 	{
 		return m_v1 == other.m_v2;
 	}
@@ -59,13 +45,6 @@ std::ostream& operator<<(std::ostream& out, Vec const& u)
 }
 std::ostream& operator<<(std::ostream& out, Vecdotted const& u)
 {
-    return out << u.m_v1 << "dot" << u.m_v2;
+    return out << u.m_v1 << ".dot(" << u.m_v2<<')';
 }
-std::ostream& operator<<(std::ostream& out, Scalar const& u)
-{
-    out << static_cast<Symbol const&>(u);
-    //if the power of scalar equals 1 do not print it. User will assume it is 1
-    if (u.m_power > 1)
-        out<<'^'<< u.m_power;
-    return out;
-}
+

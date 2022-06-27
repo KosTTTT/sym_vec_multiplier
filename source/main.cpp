@@ -1,5 +1,4 @@
 #include "Parser.h"
-#include "Settings.h"
 #include <iostream>
 
 int main(int argc, char** argv)
@@ -13,15 +12,11 @@ int main(int argc, char** argv)
 
             return 0;//++
         }
-        catch (std::logic_error &er)
-        {
-            std::cerr<<er.what();
-        }
-        catch(std::string & str)
+        catch(std::string const & str)
         {
             std::cerr<<str;
         }
-        catch(std::exception & er)
+        catch(std::exception const & er)
         {
             std::cerr<<er.what();
         }

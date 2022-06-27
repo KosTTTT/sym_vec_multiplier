@@ -23,6 +23,8 @@ namespace
     /*check if a symbol was defined elsewhere with the same name*/
     bool cvnwd(std::string const& str);
     //void throwTheVariableWasDefinedError(std::string const & str);
+    bool read_power(Fraction &fr);
+    Fraction read_fraction();
 
 }
 
@@ -47,9 +49,9 @@ namespace {
     {
         return ch==' ' || ch=='\r' || ch=='\t';
     }
-    Settings::type_real get_number()
+    int64_t get_number()
     {
-        Settings::type_real t;
+        int64_t t;
         isfile>>t;
         if(!isfile)
             throw lineCurrent;
@@ -76,8 +78,26 @@ namespace {
                 str1+=" has already been defined as a variable";
                 throw str1;
             }
-            //it is a scalar symbol
-            unit.multiplyByScalar(Scalar{symbol});
+
+            Fraction fr;
+            if(read_power(fr))
+            {
+                if(fr.num()!=0)
+                {
+                    Scalar scalar{symbol, fr};
+                    unit.multiplyByScalar(scalar);
+                }
+                else
+                {
+                    unit.multiplyByNumber(1);
+                }
+            }
+            else
+            {
+                Scalar scalar{symbol};
+                //it is a scalar symbol
+                unit.multiplyByScalar(scalar);
+            }
         }
         else if (lv.m_vs.find(symbol) != lv.m_vs.end())
         {
@@ -95,12 +115,37 @@ namespace {
         {
             Unit const& u = (*it01).second;
             //we are trying to multiply by another equation
-
-            //make a copy
-            Unit ucopy(u);
-            Unit::sum_queue l;
-            l.emplace_back(std::move(ucopy));
-            unit.multiplyBySum(std::move(l));
+            auto lambd = [&u, &unit]()
+            {
+                Unit::sum_queue l;
+                l.push_back(u);
+                unit.multiplyBySum(std::move(l));
+            };
+            Fraction fr;
+            if(read_power(fr))
+            {
+                if(fr.den()!=1 || fr.num() < 0)
+                {
+                    string er ="Error, unsuported power for a variable ";
+                    er+=symbol;
+                    throw er;
+                }
+                if(fr.num()==0)
+                {
+                    unit.multiplyByNumber(1);//++
+                }
+                else
+                {
+                    for(int64_t i = 0 , end = fr.num(); i < end ; ++i)
+                    {
+                        lambd();
+                    }
+                }
+            }
+            else
+            {
+                lambd();
+            }
         }
         else
         {
@@ -501,7 +546,30 @@ namespace {
             {
                 u = std::make_optional<Unit>();
             }
-            u->multiplyBySum(std::move(main_queue));
+            Fraction fr;
+            if(read_power(fr))
+            {
+                if(fr.den() != 1 || fr.num() < 0)
+                {
+                    throw std::string{"unsupported power for the expression "};
+                }
+                if(fr.num() == 0)
+                {
+                    u->multiplyByNumber(1);
+                }
+                else
+                {
+                    for(int64_t i = 0; i < fr.num(); ++i)
+                    {
+                        u->multiplyBySum(main_queue);
+                    }
+                }
+            }
+            else
+            {
+                u->multiplyBySum(std::move(main_queue));
+            }
+
             //++
         }
         else
@@ -510,7 +578,7 @@ namespace {
     //reads unit into u. U will not be initialized if no unit could be read.
     //u might be already initialized with multiples in it, so the method must be able continue to read unit in this case. U will not be deinitialized in this case.
     //Also if the Unit parameter has already been read with '-' the method continues to read the Unit. It will not read '-' by itself.
-    //The method just read a unit without goint to next one, e.g. 2*(1-9*t) + t
+    //The method just reads a unit without goint to next one, e.g. 2*(1-9*t) + t
     //where t will not be read by this method
     void readUnit(std::optional<Unit>& u, bool allow_new_line)
     {
@@ -540,9 +608,30 @@ namespace {
             else if (is_number())
             {
                 isfile.putback(ch);
-                auto n = get_number();
+                Fraction n = read_fraction();
                 if(!u)
                     u = std::make_optional<Unit>();
+                Fraction fr;
+                if(read_power(fr))
+                {
+                    if(fr.den() != 1 || fr.num() < 0)
+                    {
+                        std::string str="Unsupported power for a number. ";
+                        throw str;
+                    }
+                    if(fr.num() == 0)
+                    {
+                        n = 1;
+                    }
+                    else
+                    {
+                        auto ncopy = n;
+                        for(int64_t i = 1; i< fr.num(); ++i)
+                        {
+                            n*=ncopy;
+                        }
+                    }
+                }
                 u->multiplyByNumber(n);
             }
             else if (ch == '*')
@@ -606,7 +695,7 @@ namespace {
             u_term = std::make_optional<Unit>();
             MultiplyBySymbol(beg_symbol, *u_term);
             readUnit(u_term);
-            umain = std::make_optional<Unit>();
+            umain = std::make_optional<Unit>(1);
             umain->appendUnit(std::move(*u_term));
             u_term.reset();
         }
@@ -619,7 +708,7 @@ namespace {
                 if (u_term)
                 {
                     if(!umain)
-                        umain = std::make_optional<Unit>();
+                        umain = std::make_optional<Unit>(1);
                     umain->appendUnit(std::move(*u_term));
                     u_term.reset();
                 }
@@ -633,7 +722,7 @@ namespace {
                 {
                     u_term->multiplyByNumber(-1);
                     if(!umain)
-                        umain = std::make_optional<Unit>();
+                        umain = std::make_optional<Unit>(1);
                     umain->appendUnit(std::move(*u_term));
                     u_term.reset();
                 }
@@ -647,7 +736,7 @@ namespace {
                 if (u_term)
                 {
                     if(!umain)
-                        umain = std::make_optional<Unit>();
+                        umain = std::make_optional<Unit>(1);
                     umain->appendUnit(std::move(*u_term));
                     u_term.reset();
                 }
@@ -791,6 +880,176 @@ namespace
             if (lv.m_ss.find(str) == lv.m_ss.end())
                 if (lv.m_vs.find(str) == lv.m_vs.end())
                     return true;//++
+        return false;
+    }
+    //before calling make sure a number is the next char to extract
+    Fraction read_fraction()
+    {
+        int64_t num = get_number();
+        int64_t den = 1;
+        if(read_next_char())
+        {
+            if(ch == '/')
+            {
+                if(read_next_char())
+                {
+                    if(is_number())
+                    {
+                        isfile.putback(ch);
+                        den = get_number();
+                        return Fraction{num,den};
+                    }
+                }
+                throw std::string{"error reading denominator "};
+            }
+            else
+            {
+                isfile.putback(ch);
+            }
+        }
+        return Fraction{num,den};
+    }
+    bool read_power(Fraction &fr)
+    {
+        if(read_next_char())
+        {
+            if(ch == '^')
+            {
+                int64_t num;
+                int64_t den = 1;
+                //now must read the power or die
+                bool ok = false;
+                int parOpen = 0;
+                bool frNumplus = false;
+                bool frWaitDenom = false;
+                bool frDenplus = false;
+                bool minus = false;
+                bool needminus = false;
+                while(read_next_char())
+                {
+                    if(is_blank())
+                    {
+                        continue;
+                    }
+                    if(ch == '(')
+                    {
+                        minus = false;
+                        if(ok)
+                        {
+                            isfile.putback(ch);
+                            --parOpen;
+                            break;//might be the next expression
+                        }
+                        ++parOpen;
+                        ok = false;
+                    }
+                    else if(ch == ')')
+                    {
+                        if(parOpen && frNumplus && (frWaitDenom == false) && (frDenplus == false))
+                        {
+                            --parOpen;
+                            if(parOpen==0)
+                                ok = true;
+
+                            continue;
+                        }
+                        if(parOpen && frDenplus)
+                        {
+                            --parOpen;
+                            if(parOpen==0)
+                            {
+                                ok = true;
+                                break;//++
+                            }
+                            else
+                                continue;
+                        }
+                        break;//er
+                    }
+                    else if(ch == '-')
+                    {
+                        if(ok)
+                        {
+                            isfile.putback(ch);
+                            break;//might be the next expression
+                        }
+                        if((frNumplus == false) || (frNumplus && frWaitDenom && (frDenplus==false)))
+                        {
+                            if(minus)
+                                break;//error
+                            minus = true;
+                            needminus = !needminus;
+                            continue;
+                        }
+                        else
+                            break;//er
+                    }
+                    else if(ch == '/')
+                    {
+                        if(frNumplus && (frWaitDenom == false) && (frDenplus==false))
+                        {
+                            ok = false;
+                            frWaitDenom = true;
+                            continue;
+                        }
+                        else
+                        {
+                            isfile.putback(ch);
+                            break;
+                        }
+                    }
+                    else if(is_number())
+                    {
+                        if(frWaitDenom)
+                        {
+                            minus = false;
+                            isfile.putback(ch);
+                            den = get_number();
+                            frWaitDenom = false;
+                            frDenplus = true;
+                            if(parOpen)
+                                continue;
+                            ok = true;
+                            break;//++
+                        }
+                        else if(frNumplus == false)
+                        {
+                            minus = false;
+                            isfile.putback(ch);
+                            num = get_number();
+                            frNumplus = true;
+                            if(parOpen)
+                                continue;
+                            ok = true;
+                        }
+                        else
+                        {
+                            ok = false;
+                            break;//er
+                        }
+                    }
+                    else
+                    {
+                        isfile.putback(ch);
+                        break;
+                    }
+                }
+                if(ok==false)
+                {
+                    string str("Error reading power ");
+                    str += std::to_string(lineCurrent);
+                    throw str;
+                }
+                fr = Fraction{num,den};
+                if(needminus)
+                    fr=-fr;
+                return true;//++
+            }
+            else
+            {
+                isfile.putback(ch);
+            }
+        }
         return false;
     }
 }

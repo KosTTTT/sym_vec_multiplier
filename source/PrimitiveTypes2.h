@@ -5,11 +5,11 @@
 #include <utility>
 #include <algorithm>
 #include <list>
-#include "Settings.h"
 #include <initializer_list>
 #include <iosfwd>
 #include <cmath>
 #include <optional>
+#include <vector>
 
 
 
@@ -17,72 +17,63 @@
 /*! Scalars multiplied together. It might be a single scalar also.*/
 class ScalarGroup
 {
-	friend class Unit;
-        friend std::ostream& operator<<(std::ostream& out, ScalarGroup const& u);
-
-        /*! A number that is multiplied by this ScalarGroup. Default is 1*/
-        Settings::type_real m_multiple = 1;
-        /*! Array of scalar multiples*/
-        std::vector<Scalar> m_arrScalar;
-        /*! Array of dot products of vectors*/
-        std::vector<Vecdotted> m_arrVecdotted;
 
 public:
+    /*! A number that is multiplied by this ScalarGroup. Default is 0*/
+    Fraction m_multiple;
+    /*! Array of scalar multiples*/
+    std::list<Scalar> m_arrScalar;
+    /*! Array of dot products of vectors*/
+    std::list<Vecdotted> m_arrVecdotted;
+
+
 	ScalarGroup() {}
-	explicit ScalarGroup(Settings::type_real multiple) :
-		m_multiple(multiple) {}
+    ScalarGroup(Fraction const & multiple) :
+        m_multiple(multiple)
+    {}
 	/*! 
 	Multiplies ScalarGroup sg with this. 
-	@return A reference to this new Scalargroup
 	*/
     ScalarGroup& multiply(ScalarGroup const& sg);
+
 	/*! Return true if two ScalarGroups can be added together.*/
     bool canBeAdded(ScalarGroup const & other) const;
 	/*!
-    Adds ScalarGroup sg with this..
-    Befor using this function bool canBeAdded(ScalarGroup const & other) const must be used
-	@return A reference to this new Scalargroup
+    Adds ScalarGroup sg with this.
+    Before using this function bool canBeAdded(ScalarGroup const & other) const must be used
 	*/
     ScalarGroup& add(ScalarGroup const & sg);
-    /*! Set to zero and clears data members*/
-    void setZero() noexcept;
-    Settings::type_real multiple() const noexcept
+
+    inline bool isZero() const noexcept
 	{
-		return m_multiple;
+        return !m_multiple;
 	}
-    bool isZero() const noexcept
-	{
-        return std::abs(m_multiple) < Settings::scalar_tol;
-	}
-    std::vector<Scalar> const& arrScalar() const noexcept
-	{
-		return m_arrScalar;
-	}
-    std::vector<Vecdotted> const& arrVecDotted() const noexcept
-	{
-		return m_arrVecdotted;
-	}
-    /*! Assign a multiple, replacing existing value*/
-    void AssignMultipe(Settings::type_real m);
+    void multByNumber(Fraction const & v) noexcept;
     /*! Multiply by a Scalar*/
     void MultByScalar(Scalar const & sc);
 
-    /*! Append a dot product of two vectors.*/
-    template<typename ...Params>
-    void MultByVecdotted(Params && ...params)
+    /*! Multiply by Vecdotted.*/
+    inline void MultByVecdotted(Vecdotted const & v)
 	{
-        m_arrVecdotted.emplace_back(std::forward<Params>(params)...);
+        if(isZero() == false)
+            m_arrVecdotted.push_back(v);
 	}
     /*! Returns true if ScalarGroup equals 1*/
-    bool isOne() const noexcept
+    inline bool isOne() const noexcept
 	{
-        return m_arrScalar.empty() && m_arrVecdotted.empty() && std::abs(m_multiple-1) < Settings::scalar_tol;
+        return m_arrScalar.empty() && m_arrVecdotted.empty() && m_multiple == 1;
 	}
-    bool isMinusOne() const noexcept
+    inline bool isMinusOne() const noexcept
 	{
-        return m_arrScalar.empty() && m_arrVecdotted.empty() && std::abs(m_multiple +1)< Settings::scalar_tol;
+        return m_arrScalar.empty() && m_arrVecdotted.empty() && m_multiple == -1;
 	}
+    std::pair<bool,std::list<Scalar>::iterator> getScalar(std::string const& str);
     void swap(ScalarGroup & other) noexcept;
+    friend std::ostream& operator<<(std::ostream& out, ScalarGroup const& u);
+private:
+    void clean_scalar_arr();
+    /*! Set to zero and clear data members*/
+    void setZero() noexcept;
 };
 
 /*!
@@ -93,14 +84,13 @@ class Unit
 
 public:
     using sum_queue = std::list<Unit>;
-    using sum_product = std::vector<sum_queue>;
+    using sum_product = std::list<sum_queue>;
 private:
     /*multiple of the gobal sum of units */
     class Multiple
     {
         friend class Unit;
         friend std::ostream& operator<<(std::ostream& out, Unit const& u);
-        friend std::ostream& operator<<(std::ostream& out, ScalarGroup const& u);
         std::optional<ScalarGroup> m_sg;//scalar multiple
         std::optional<Vec> m_vec;//vector multiple
 
@@ -113,31 +103,39 @@ private:
 
 
     public:
-        Multiple(){}
-        Multiple(Settings::type_real v) :
+        inline Multiple(){}
+        inline Multiple(Fraction const &v) :
             m_sg(v)
         {}
-        explicit Multiple(std::string const& vec) :
+        inline Multiple(Vec const& vec) :
             m_vec(vec)
         {}
-        explicit Multiple(Vec const& vec) :
-            m_vec(vec)
-        {}
-        Multiple(sum_product const& list)
+        //empty==false
+        inline explicit operator bool() const noexcept
         {
-            append_arrunitsh(list,m_arrUnits);
+            return m_sg.has_value() || m_vec.has_value() || (m_arrUnits.empty() == false);
         }
-        Multiple(Multiple const& other);
-        Multiple& operator=(Multiple const& other);
-        Multiple(Multiple&& other) noexcept;
-        Multiple& operator=(Multiple&& other) noexcept;
-        /*returns true is this multiple is zero. So everything that multiplies on it will be zero*/
-        bool isZero() const;
-        void setZero() noexcept;
-        /*returns true if multiple is one*/
-        bool isOne() const noexcept;
-        bool isMinusOne() const noexcept;
+        //are brackets opened? when empty expanded == false
+        inline bool is_expanded() const noexcept
+        {
+            return (m_sg.has_value() || m_vec.has_value()) && m_arrUnits.empty();
+        }
 
+        /*returns true is this multiple is zero. So everything that multiplies on it will be zero*/
+        inline bool isZero() const noexcept
+        {
+            return m_sg.has_value() && m_sg->isZero();
+        }
+        void setZero();
+        /*returns true if multiple is one*/
+        inline bool isOne() const noexcept
+        {
+            return m_arrUnits.empty() && !m_vec && m_sg && m_sg->isOne();
+        }
+        inline bool isMinusOne() const noexcept
+        {
+            return m_arrUnits.empty() && !m_vec && m_sg && m_sg->isMinusOne();
+        }
         /*sets this multiple to one*/
         void setOne();
         /*!
@@ -146,77 +144,75 @@ private:
         bool canbeadded(Multiple const& mother) const;
         /*! Call it only if bool canbeadded(Multiple const& mother) const; returns true*/
         void add(Multiple const & other);
-        /*! canbeadded + add*/
-        bool addif(Multiple const & other);
         /*multiplies other to this*/
         void multiply(Multiple const& other);
         void swap(Multiple & other) noexcept;
-
-        //void copy_arrunits(sum_product  const& other);
-        static void append_arrunitsh(sum_product  const& input, sum_product & output);
-
     };
 
-    friend std::ostream& operator<<(std::ostream& out, Unit const& u);
+
 
 
     /*Multiple of m_s*/
-    std::optional<Multiple> m_m;
+    Multiple m_m;
     /*Summ of Units inside this Unit*/
     sum_queue m_s;
-    /*true if the unit is expanded, e.g. 2(a + 3) is not expanded but 2a + 6 is.*/
-    bool m_expanded = false;
 
 
 
 
 public:
-	Unit()
+    inline Unit()
 	{}
-    Unit(Settings::type_real v):
+    inline Unit(Fraction const & v):
         m_m(v)
 	{}
-	Unit(Unit const& other);
-	Unit& operator=(Unit const & other);
-	Unit(Unit && other) noexcept;
-	Unit& operator=(Unit && other) noexcept;
 
+    //empty==false
+    inline explicit operator bool() const noexcept
+    {
+        return (bool)m_m || (m_s.empty()==false);
+    }
+    /*true if the unit is expanded, e.g. 2(a + 3) is not expanded but 2a + 6 is.
+    For an empty Unit if_expanded == false*/
+    bool is_expanded() const noexcept;
     /*!
      * Multiply the Unit by Vec
     */
-	template <typename T>
-	void multiplyByVec(T&& vec)
-	{
-		if (!m_m)
-		{
-            m_m.emplace(std::forward<T>(vec));
-		}
-		else
-		{
-            Multiple mtmp{std::forward<T>(vec)};
-            m_m->multiply(mtmp);
-		}
-	}
-    /*! Multiply this Unit by an array of Unit sums.The unit becomes not expanded.
+    void multiplyByVec(Vec const & vec);
+    /*! Multiply this Unit by an array of Unit sums sum_queue.
      */
-    void multiplyBySum(sum_queue const & l);
-    void multiplyBySum(sum_queue && l);
-
+    template<typename Sum_queue>
+    void multiplyBySum(Sum_queue && l)
+    {
+        if(m_m)
+        {
+            Multiple m;
+            m.m_arrUnits.emplace_back(std::forward<Sum_queue>(l));
+            m_m.multiply(m);
+        }
+        else
+        {
+            m_m.m_arrUnits.emplace_back(std::forward<Sum_queue>(l));
+        }
+    }
     /*!  */
     void multiplyByScalar(Scalar const& arg);
     /*!  */
-    void multiplyByNumber(Settings::type_real const & arg);
+    void multiplyByNumber(Fraction const & arg);
     /*!
-     * Appends the Unit to be in the list of the sum of Units. The unit becomes not expanded.
+     * Appends the Unit to be in the list of the sum of Units.
     */
-    void appendUnit(Unit const& u);
-    void appendUnit(Unit && u);
-	/*! 
-    Multiplies everything together so that there will be either a simple multiple( without parentheses )
-    or sum of Units each of which has only simple multiples.
-    If a Unit is expanded it has either only simple multiple or it is without multiple but with sum of expanded Units .
+    template<typename UnitType>
+    void appendUnit(UnitType && u)
+    {
+        if(isZero() == false)
+            m_s.emplace_back(std::forward<UnitType>(u));
+    }
+    /*!
+    Multiplies everything together so that is_expanded() returns true.
+    The Unit must not be empty
      */
-	void expand();
+    void expand();
     /*! Adds parameter to this Unit and expands it.
      */
     void sum(Unit const & u);
@@ -229,25 +225,28 @@ public:
     E.g. if Unit is x*t + a*t ,
 	after call with argument "t"
 	u becomes t(x+a).
-	If a symbol with str will not be found. The method will just expand the Unit and return
+    If a symbol with str will not be found. The method will do nothing
     */
     void group(std::string const & str);
     /*! Returns true, if a Unit has compounds expression in its multiple. E.g. if a Unit is 5*(t+3) method returns true. If 7*u*b - returns false*/
     inline bool has_parenthesis_m() const
     {
-        return m_m && !m_m->m_arrUnits.empty();
+        return m_m.m_arrUnits.empty()==false;
     }
-
+    inline bool isZero() const noexcept
+    {
+        return m_m.isZero();
+    }
     void swap(Unit & other) noexcept;
-
+    friend std::ostream& operator<<(std::ostream& out, Unit const& u);
 private:
     /*sets multiple of this object to zero and clears everything else
      */
-	void setZero();
+    void setZero();
 
 
-	/*all elements of v must be with only one simple mutiple
-	tries to add everything together,if a unit can be added it is removed and is added to another Unit in the array, 
+    /*all elements of v must be with only one simple mutiple.
+    The function tries to add everything together.
     */
 	static void hmta(sum_queue &v);
     /*If an Unit has a single term it is moved to a multiple. It is assumed that the argument is expanded and has Units in m_s
@@ -262,24 +261,25 @@ private:
     */
     static sum_queue expand_move(Unit & UnitChild);
     /* Turns multiple of this unit to an expanded Unit and returns it. Multiple of this object will be destroyed.
-    If the Unit had not multiple returns nullptr
+    If the Unit had not multiple returns false
     */
     bool moveMultiple(Unit & ret);
     /* Turns multiple of this unit to an array of expanded Units. Multiple of this object is destroyed.
     Return array will be empty if the Unit does not have a multiple
     */
 	sum_queue moveMultipleq();
-    /*  */
-    static void append_sum_queue(sum_queue const & source, sum_queue & dest);
+
 
     //returns pair <an iterator to the unit from m_s with a maximum power Scalar , an iterator to this Scalar in its array>
 	//will return end if nothing was found
+    //assumed that the unit is expanded and multiple is empty
     //
-    auto h_fsm(std::string const& str)->std::pair<sum_queue::iterator,decltype(ScalarGroup::m_arrScalar)::iterator>;
+    auto h_fsm(std::string const& str) ->std::pair<sum_queue::iterator, std::list<Scalar>::iterator>;
+    void clear_multiple();
+    void clear_unit();
 
 };
-//+
-std::ostream& operator<<(std::ostream& out, Unit const& u);
-//+
-std::ostream& operator<<(std::ostream& out, ScalarGroup const& u);
+
+
+
 #endif // PT2_H
