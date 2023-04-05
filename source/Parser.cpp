@@ -156,22 +156,6 @@ namespace {
             throw str1;
         }
     }
-    std::string generateVName()
-    {
-        static size_t count = 0;
-
-        while( count < std::numeric_limits<decltype(count)>::max())
-        {
-            string str("local_var_");
-            str += std::to_string(count++);
-            if (lv.m_lv.find(str) == lv.m_lv.end())
-            {
-                return str;
-            }
-        }
-        string strer("Could not create new variable. All names are taken");
-        throw strer;//error--
-    }
     inline
     bool read_next_char()
     {
@@ -834,16 +818,8 @@ void handle_input(char const* fileName)
                 }
                 else
                 {
-                    //create a variable name and continue to handle the Unit, which now starts with symbol str
-                    auto newname = generateVName();
-                    readUnits(newname, str);
+                    throw lineCurrent;
                 }
-            }
-            else if (is_number() || ch == '(' || ch == '-')
-            {
-                isfile.putback(ch);
-                auto newname = generateVName();
-                readUnits(newname);
             }
             else
             {

@@ -1,6 +1,6 @@
 #ifndef PT_H
 #define PT_H
-#include "Fraction.h"
+#include "Fraction.hpp"
 #include <string>
 #include <iosfwd>
 #include <utility>

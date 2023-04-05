@@ -1061,7 +1061,7 @@ auto Unit::h_fsm(std::string const& str) -> std::pair<sum_queue::iterator, std::
                 auto res = u.m_m.m_sg->getScalar(str);
                 if(res.first)
                 {
-                    if (res.second->power() > vmax)
+                    if (vmax<res.second->power())
                     {
                         vmax = res.second->power();
                         it_ret1 = it_next;
