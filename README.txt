@@ -12,7 +12,7 @@ y = ytmp*(a-b)^2
 expand y
 #print to a text file with the name "y"
 print y
-#prints (a^(3)-3*a^(2)*b+3*a*b^(2)-b^(3))
+#prints a^(3)-3*a^(2)*b+3*a*b^(2)-b^(3)
 #delete y and ytmp from memory
 clear y,ytmp
 
@@ -21,7 +21,7 @@ syms t
 y = a*t^2 + b*t^2 + 5t +t*a
 group y t
 print y
-#prints (t^(2)(a+b)+t(5+a))
+#prints t^(2)*(a+b)+t*(5+a)
 #delete all variables and symbolic names
 clear all
 

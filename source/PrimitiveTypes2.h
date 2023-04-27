@@ -277,7 +277,14 @@ private:
     auto h_fsm(std::string const& str) ->std::pair<sum_queue::iterator, std::list<Scalar>::iterator>;
     void clear_multiple();
     void clear_unit();
-
+    static bool has_minus(Unit const & u);
+    //do we need brackets when u is in multiple? e.g. (7*r +1)*u*(8-i)
+    static bool needBm(Unit const & u);
+    /**
+     * @return can 'u' be multiplied without extra parenthesis needed around it, when 'u' is a factor in front of : u*(5+a)*(6+e)
+     * E.g. u+u return false -5*(u+u) returns true
+     */
+    static bool cmwb(Unit const & u);
 };
 
 

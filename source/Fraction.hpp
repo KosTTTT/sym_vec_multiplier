@@ -62,6 +62,18 @@ public:
         {
             return m_num*other.m_den < other.m_num*m_den;
         }
+        inline bool operator<(int other) const noexcept
+        {
+            return *this<Fraction(other);
+        }
+        inline bool operator<(int64_t other) const noexcept
+        {
+            return *this<Fraction(other);
+        }
+        inline bool operator<(double other) const noexcept
+        {
+            return *this<Fraction(other);
+        }
         friend inline bool operator==(Fraction const& lhs, Fraction const& rhs) noexcept
         {
             return lhs.m_num == rhs.m_num && lhs.m_den == rhs.m_den;

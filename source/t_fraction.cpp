@@ -7,7 +7,7 @@
 static double const told = 1.0e-15;
 static float const tolf = 1.0e-7f;
 
-int main(int argc, char*args[])
+int main()
 {
     std::cout<<"Running a Fraction test.\n";
     {
@@ -1060,14 +1060,14 @@ int main(int argc, char*args[])
             }
         }
         {
-            //bool operator>(Fraction const & other)
+            //bool operator<(Fraction const & other)
 
             {
                 Fraction fr1(1,10);
                 Fraction fr2(2,10);
                 if(fr2<fr1)
                 {
-                    std::cout<<"Error in operator>. Line "<<__LINE__;
+                    std::cout<<"Error in operator<. Line "<<__LINE__;
                     return 1;
                 }
             }
@@ -1076,7 +1076,30 @@ int main(int argc, char*args[])
                 Fraction fr2(1,10);
                 if(fr2<fr1)
                 {
-                    std::cout<<"Error in operator>. Line "<<__LINE__;
+                    std::cout<<"Error in operator<. Line "<<__LINE__;
+                    return 1;
+                }
+            }
+            {
+                Fraction fr1(1,10);
+                if(fr1 < 0)
+                {
+                    std::cout<<"Error in operator<. Line "<<__LINE__;
+                    return 1;
+                }
+            }
+            {
+                Fraction fr1(1,10);
+                if(fr1 < -0.1)
+                {
+                    std::cout<<"Error in operator<. Line "<<__LINE__;
+                    return 1;
+                }
+            }
+            {
+                if(Fraction{} < -0.1)
+                {
+                    std::cout<<"Error in operator<. Line "<<__LINE__;
                     return 1;
                 }
             }

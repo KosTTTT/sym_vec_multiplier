@@ -181,15 +181,11 @@ std::ostream& operator<<(std::ostream& out, ScalarGroup const& u)
     {
         return out<<'0';
     }
-
-    bool was1 = false;
-    bool was_m1 = false;
     if (u.m_multiple == -1)
     {
-        was_m1 = true;
         if(u.m_arrScalar.empty() && u.m_arrVecdotted.empty())
         {
-            return out<<u.m_multiple;
+            return out<<"-1";
         }
         else
         {
@@ -198,56 +194,45 @@ std::ostream& operator<<(std::ostream& out, ScalarGroup const& u)
     }
     else if (u.m_multiple == 1)
     {
-        was1 = true;
         if(u.m_arrScalar.empty() && u.m_arrVecdotted.empty())
         {
-            return out<<u.m_multiple;
+            return out<<'1';
         }
     }
     else
     {
         out<<u.m_multiple;
+        if(u.m_arrScalar.empty()==false || u.m_arrVecdotted.empty()==false)
+        {
+            out<<'*';
+        }
     }
-
-
-
-
-
     if (!u.m_arrScalar.empty())
     {
-        if (!was1 && !was_m1)
-        {
-            out << '*' ;
-        }
-        out << u.m_arrScalar.front();
+        auto it = u.m_arrScalar.begin();
+        out << *it;
+        ++it;
         auto end = u.m_arrScalar.end();
-        for (auto it = ++u.m_arrScalar.begin(); it!=end; ++it)
+        for (; it!=end; ++it)
         {
             out<< '*' << *it;
+        }
+        if (!u.m_arrVecdotted.empty())
+        {
+            out << '*';
         }
     }
     if (!u.m_arrVecdotted.empty())
     {
-        //print "*" or no
-        if (u.m_arrScalar.empty())
-        {
-            if (!was1 && !was_m1)
-            {
-                out << '*' ;
-            }
-        }
-        else
-        {
-            out << '*';
-        }
-        out << u.m_arrVecdotted.front();
+        auto it = u.m_arrVecdotted.begin();
+        out << *it;
+        ++it;
         auto end = u.m_arrVecdotted.end();
-        for (auto it = ++u.m_arrVecdotted.begin(); it != end; ++it)
+        for (; it != end; ++it)
         {
             out << '*' << *it;
         }
     }
-
     return out;
 }
 //--
@@ -255,19 +240,16 @@ bool Unit::is_expanded() const noexcept
 {
     if(m_s.empty() && m_m.is_expanded())
         return true;//e2++
-    if((bool)m_m == false)
+    if(!m_m)
     {
         if(m_s.empty() == false)
         {
-            size_t i = 0;
             for(auto const & el: m_s)
             {
-                ++i;
                 if((el.m_s.empty() && el.m_m.is_expanded()) == false)
                     return false;
             }
-            if(i > 1)
-                return true;//e1++
+            return true;//e1++
         }
     }
     return false;
@@ -276,11 +258,11 @@ void Unit::multiplyByVec(Vec const & vec)
 {
     if (!m_m)
     {
-        m_m = Multiple{vec};
+        m_m = Multiple(vec);
     }
     else
     {
-        m_m.multiply(Multiple{vec});
+        m_m.multiply(Multiple(vec));
     }
 }
 void Unit::multiplyByScalar(Scalar const& arg)
@@ -288,13 +270,13 @@ void Unit::multiplyByScalar(Scalar const& arg)
     if(m_m)
     {
         Multiple m;
-        m.m_sg = ScalarGroup{1};
+        m.m_sg = ScalarGroup(1);
         m.m_sg->MultByScalar(arg);
         m_m.multiply(m);
     }
     else
     {
-        m_m.m_sg = ScalarGroup{1};
+        m_m.m_sg = ScalarGroup(1);
         m_m.m_sg->MultByScalar(arg);
     }
 }
@@ -302,11 +284,11 @@ void Unit::multiplyByNumber(Fraction const & arg)
 {
     if(m_m)
     {
-        m_m.multiply(Multiple{arg});
+        m_m.multiply(Multiple(arg));
     }
     else
     {
-        m_m.m_sg = ScalarGroup{arg};
+        m_m.m_sg = ScalarGroup(arg);
     }
     if(m_m.isZero())
         setZero();
@@ -942,11 +924,9 @@ void Unit::group(std::string const& str)
     uthis.m_s.splice(uthis.m_s.begin(), msnew);//++end
     swap(uthis);
 }
-
-
 std::ostream& operator<<(std::ostream& out, Unit const& u)
 {
-    auto printsum_h=[](std::ostream& out, Unit::sum_queue const & sum)
+    auto printsum_h=[&](Unit::sum_queue const & sum)
     {
         //print the first unit
         auto it_begin = sum.begin();
@@ -955,83 +935,297 @@ std::ostream& operator<<(std::ostream& out, Unit const& u)
         for (auto it = ++it_begin, end = sum.end(); it != end; ++it)
         {
             //**decide put "+" or not
-            if ((*it).m_m.m_sg)
+            if (Unit::has_minus(*it))
             {
-                if ((*it).m_m.m_sg->m_multiple.num() < 0)
-                {
-                    out << *it;
-                    continue;
-                }
+                out << *it;
             }
-            //**
-            out << '+';
-            out << *it;
+            else
+            {
+                out <<'+'<<*it;
+            }
         }
     };
-	//return out<<L"test";
-
-	//print multiple first
-
-	//return out << *u.m_m.m_sg;
-
-
 
     if (u.m_m.isZero())
 	{
-        out << '0';
-		return out;//++exit
+        return out << '0';
 	}
 	if (u.m_m)
 	{
-		bool bprint_m_before_v = false;
-        if (u.m_m.m_sg)
-		{
-			//--decide print multiple or not
+        if (u.m_m.isOne())
+        {
+            if (u.m_s.empty())
+            {
+                return out << '1';
+            }
+            else
+            {
+                //don't need to put '('
+                printsum_h(u.m_s);
+            }
+        }
+        else if(u.m_m.isMinusOne())
+        {
+            if (u.m_s.empty())
+            {
+                return out << "-1";
+            }
+            else
+            {
+                out<<"-(";
+                printsum_h(u.m_s);
+                return out<<')';
+            }
+        }
+        else
+        {
+            if (u.m_m.m_sg)
+            {
+                if(u.m_m.m_sg->isOne() == false)
+                {
+                    if(u.m_m.m_sg->isMinusOne())
+                    {
+                        out<<'-';
+                        if(u.m_m.m_vec)
+                        {
+                            out << *u.m_m.m_vec;
+                        }
+                        else
+                        {
+                            //print all multiples, e.g. (7*r +1)*(8u-i)*a
 
-            if (u.m_m.isOne())
-			{
-                if (u.m_s.empty())
-				{
-                    out << '1';
-                    return out;//++exit
-				}
-			}
-			else
-			{
-				bprint_m_before_v = true;
-                out << *u.m_m.m_sg;
-			}
-		}
-        if (u.m_m.m_vec)
-		{
-			if (bprint_m_before_v)
-			{
-                out << '*';
-			}
-            out << *u.m_m.m_vec;
-		}
-		//print all multiples with brackets, e.g. (7*r +1)*(8u-i)
-        for (auto const& sum : u.m_m.m_arrUnits)
-		{
-			if (!sum.empty())
-			{
-                out << '(';
-                printsum_h(out,sum);
-                out << ')';
-			}
-		}
+                            bool f = true;
+                            for (auto const& sum : u.m_m.m_arrUnits)
+                            {
+                                if(sum.empty())
+                                    throw std::logic_error("Program error. Wrong unit.");
+                                if(f==false)
+                                    out<<'*';
+                                else
+                                    f=false;
+                                if(sum.size() > 1)
+                                {
+                                    out << '(';
+                                    printsum_h(sum);
+                                    out << ')';
+                                }
+                                else
+                                {
+                                    if(Unit::needBm(sum.front()))
+                                    {
+                                        out << '(';
+                                        out << sum.front();
+                                        out << ')';
+                                    }
+                                    else
+                                    {
+                                        out << sum.front();
+                                    }
+                                }
+                            }
+                            if(u.m_s.empty() == false)
+                            {
+                                out<<'*';
+                                if(u.m_s.size() > 1)
+                                {
+                                    out << '(';
+                                    printsum_h(u.m_s);
+                                    out << ')';
+                                }
+                                else
+                                {
+                                    if(Unit::needBm(u.m_s.front()))
+                                    {
+                                        out << '(';
+                                        out << u.m_s.front();
+                                        out << ')';
+                                    }
+                                    else
+                                    {
+                                        out << u.m_s.front();
+                                    }
+                                }
+                            }
+                            return out;
+                        }
+                    }
+                    else
+                    {
+                        out << *u.m_m.m_sg;
+                        if(u.m_m.m_vec)
+                        {
+                            out<<'*';
+                            out << *u.m_m.m_vec;
+                        }
+                    }
+                    //print all multiples, e.g. (7*r +1)*(8u-i)*a
+                    for (auto const& sum : u.m_m.m_arrUnits)
+                    {
+                        if(sum.empty())
+                            throw std::logic_error("Program error. Wrong unit.");
+                        out<<'*';
+                        if(sum.size() > 1)
+                        {
+                            out << '(';
+                            printsum_h(sum);
+                            out << ')';
+                        }
+                        else
+                        {
+                            if(Unit::needBm(sum.front()))
+                            {
+                                out << '(';
+                                out << sum.front();
+                                out << ')';
+                            }
+                            else
+                            {
+                                out << sum.front();
+                            }
+                        }
+                    }
+                    if(u.m_s.empty() == false)
+                    {
+                        out<<'*';
+                        if(u.m_s.size() > 1)
+                        {
+                            out << '(';
+                            printsum_h(u.m_s);
+                            out << ')';
+                        }
+                        else
+                        {
+                            if(Unit::needBm(u.m_s.front()))
+                            {
+                                out << '(';
+                                out << u.m_s.front();
+                                out << ')';
+                            }
+                            else
+                            {
+                                out << u.m_s.front();
+                            }
+                        }
+                    }
+                    return out;
+                }
+            }
+            //like u.m_m.m_sg does not exist
+            if(u.m_m.m_vec)
+            {
+                out << *u.m_m.m_vec;
+                //print all multiples, e.g. (7*r +1)*(8u-i)*a
+                for (auto const& sum : u.m_m.m_arrUnits)
+                {
+                    if(sum.empty())
+                        throw std::logic_error("Program error. Wrong unit.");
+                    out<<'*';
+                    if(sum.size() > 1)
+                    {
+                        out << '(';
+                        printsum_h(sum);
+                        out << ')';
+                    }
+                    else
+                    {
+                        if(Unit::needBm(sum.front()))
+                        {
+                            out << '(';
+                            out << sum.front();
+                            out << ')';
+                        }
+                        else
+                        {
+                            out << sum.front();
+                        }
+                    }
+                }
+            }
+            else
+            {
+                if(u.m_s.empty() && (u.m_m.m_arrUnits.size()==1))
+                {
+                    printsum_h(u.m_m.m_arrUnits.front());
+                    return out;
+                }
+                else
+                {
+                    //print all multiples, e.g. (7*r +1)*(8u-i)*a
+
+                    bool f = true;
+                    for (auto const& sum : u.m_m.m_arrUnits)
+                    {
+                        if(sum.empty())
+                            throw std::logic_error("Program error. Wrong unit.");
+                        if(f==false)
+                            out<<'*';
+                        if(sum.size() > 1)
+                        {
+                            out << '(';
+                            printsum_h(sum);
+                            out << ')';
+                        }
+                        else
+                        {
+                            if(f && Unit::cmwb(sum.front()))
+                            {
+                                out << sum.front();
+                            }
+                            else
+                            {
+                                if(Unit::needBm(sum.front()))
+                                {
+                                    out << '(';
+                                    out << sum.front();
+                                    out << ')';
+                                }
+                                else
+                                {
+                                    out << sum.front();
+                                }
+                            }
+                        }
+                        f = false;
+                    }
+                }
+            }
+            if(u.m_s.empty() == false)
+            {
+                out<<'*';
+                if(u.m_s.size() > 1)
+                {
+                    out << '(';
+                    printsum_h(u.m_s);
+                    out << ')';
+                }
+                else
+                {
+                    if(Unit::needBm(u.m_s.front()))
+                    {
+                        out << '(';
+                        out << u.m_s.front();
+                        out << ')';
+                    }
+                    else
+                    {
+                        out << u.m_s.front();
+                    }
+                }
+            }
+        }
 	}
-	//--
-
-    //print the sum of multiples. Wrap it in parenthesis if Unit has multiple
-
-	if (!u.m_s.empty())
-	{
-        out << '(';
-        printsum_h(out,u.m_s);
-        out << ')';
-
-	}
+    else
+    {
+        if (u.m_s.empty() == false)
+        {
+            //don't need to put '('
+            printsum_h(u.m_s);
+        }
+        else
+        {
+            throw std::logic_error("Error: empty unit.");
+        }
+    }
 	return out;
 }
 
@@ -1055,20 +1249,118 @@ auto Unit::h_fsm(std::string const& str) -> std::pair<sum_queue::iterator, std::
     Fraction vmax = std::numeric_limits<decltype(declval<Fraction>().num())>::lowest();
     for (auto it_next = m_s.begin(); it_next != it_end; ++it_next)
     {
-            Unit & u = *it_next;
-            if (u.m_m.m_sg.has_value())
+        Unit & u = *it_next;
+        if (u.m_m.m_sg.has_value())
+        {
+            auto res = u.m_m.m_sg->getScalar(str);
+            if(res.first)
             {
-                auto res = u.m_m.m_sg->getScalar(str);
-                if(res.first)
+                if (vmax<res.second->power())
                 {
-                    if (vmax<res.second->power())
+                    vmax = res.second->power();
+                    it_ret1 = it_next;
+                    it_ret2 = res.second;
+                }
+            }
+        }
+    }
+    return std::make_pair(it_ret1, it_ret2);//++
+}
+bool Unit::has_minus(Unit const & u)
+{
+    if(u.m_m)
+    {
+        if(u.m_m.isOne())
+        {
+            if(u.m_s.empty())
+                return false;
+            return has_minus(u.m_s.front());
+        }
+        else
+        {
+            if(u.m_m.m_sg)
+            {
+                if(u.m_m.m_sg->isOne()==false)
+                {
+                    return u.m_m.m_sg.value().m_multiple.num() < 0;
+                }
+            }
+            if(u.m_m.m_vec)
+                return false;
+            //m_arrUnits is not empty
+            sum_queue const & s = u.m_m.m_arrUnits.front();
+            auto const ss = s.size();
+            if(ss > 1)
+            {
+                if(u.m_s.empty() == false)
+                    return false;
+                if(u.m_m.m_arrUnits.size() > 1)
+                    return false;
+            }
+            return has_minus(s.front());
+        }
+    }
+    else
+    {
+        if(u.m_s.empty())
+            throw std::logic_error("Error: empty unit");
+        return has_minus(u.m_s.front());
+    }
+}
+bool Unit::needBm(Unit const & u)
+{
+    if(u.m_m)
+    {
+        if(u.m_m.m_sg)
+        {
+            if(u.m_m.m_sg.value().m_multiple < 0)
+                return true;
+        }
+        else
+        {
+            if(!u.m_m.m_vec)
+            {
+                if(u.m_s.empty())
+                {
+                    if(u.m_m.m_arrUnits.size()==1)
                     {
-                        vmax = res.second->power();
-                        it_ret1 = it_next;
-                        it_ret2 = res.second;
+                        if(u.m_m.m_arrUnits.front().size()>1)
+                        {
+                            return true;
+                        }
+                        return needBm(u.m_m.m_arrUnits.front().front());
                     }
                 }
             }
+        }
     }
-    return std::make_pair(it_ret1, it_ret2);//++
+    else
+    {
+        if(u.m_s.size() > 1)
+            return true;
+        return needBm(u.m_s.front());
+    }
+    return false;
+}
+bool Unit::cmwb(Unit const & u)
+{
+    if(!u.m_m)
+    {
+        if(u.m_s.size() > 1)
+            return false;
+        return cmwb(u.m_s.front());
+    }
+    else
+    {
+        if(u.m_s.empty() && !u.m_m.m_sg && !u.m_m.m_vec)
+        {
+            if(u.m_m.m_arrUnits.size()==1)
+            {
+                if(u.m_m.m_arrUnits.front().size() > 1)
+                    return false;
+                return cmwb(u.m_m.m_arrUnits.front().front());
+            }
+        }
+        return true;
+    }
 }
