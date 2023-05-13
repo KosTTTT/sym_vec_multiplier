@@ -1,4 +1,3 @@
-#include "t_fraction.hpp"
 #include <iostream>
 #include <limits>
 #include <sstream>

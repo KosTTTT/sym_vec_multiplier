@@ -28,6 +28,8 @@ add_executable (t_Fraction
 Fraction.hpp
 Fraction.cpp
 t_fraction.cpp
-t_fraction.hpp
 )
-
+add_custom_target(Tests
+DEPENDS t_Fraction svmultexe
+COMMAND ${CMAKE_COMMAND} -D var1=t_Fraction -D var2=svmultexe -P ${CMAKE_CURRENT_SOURCE_DIR}/testsScript.cmake
+)
