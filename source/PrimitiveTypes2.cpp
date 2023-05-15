@@ -730,7 +730,23 @@ void Unit::Multiple::setOne()
     m_vec.reset();
     m_sg.emplace(1);
 }
-
+bool Unit::Multiple::isOne() const noexcept
+{
+    if(static_cast<bool>(*this) == false)
+        return false;
+    if(m_sg && !m_sg->isOne())
+        return false;
+    if(m_vec)
+        return false;
+    for(auto const &sum:m_arrUnits)
+    {
+        if(sum.size() > 1)
+            return false;
+        if(sum.front().isOne() == false)
+            return false;
+    }
+    return true;
+}
 void Unit::Multiple::swap(Multiple & other) noexcept
 {
     std::swap(m_sg, other.m_sg);
@@ -1311,25 +1327,31 @@ bool Unit::needBm(Unit const & u)
 {
     if(u.m_m)
     {
-        if(u.m_m.m_sg)
+        if(u.m_m.m_sg && !u.m_m.m_sg.value().isOne())
         {
-            if(u.m_m.m_sg.value().m_multiple < 0)
-                return true;
+            return u.m_m.m_sg.value().m_multiple < 0;
         }
         else
         {
             if(!u.m_m.m_vec)
             {
-                if(u.m_s.empty())
+                auto itn = u.m_m.m_arrUnits.begin();
+                auto ite = u.m_m.m_arrUnits.end();
+                while(itn!=ite)
                 {
-                    if(u.m_m.m_arrUnits.size()==1)
+                    if(itn->size() > 1)
+                        return true;
+                    if(itn->front().isOne() == false)
                     {
-                        if(u.m_m.m_arrUnits.front().size()>1)
-                        {
-                            return true;
-                        }
-                        return needBm(u.m_m.m_arrUnits.front().front());
+                        return needBm(itn->front());
                     }
+                    ++itn;
+                }
+                if(u.m_s.empty()==false)
+                {
+                    if(u.m_s.size() > 1)
+                        return true;
+                    return needBm(u.m_s.front());
                 }
             }
         }
@@ -1362,5 +1384,29 @@ bool Unit::cmwb(Unit const & u)
             }
         }
         return true;
+    }
+}
+bool Unit::isOne() const noexcept
+{
+    if(m_m)
+    {
+        if(m_m.isOne() == false)
+            return false;
+    }
+    else if(m_s.empty())
+    {
+        return false;
+    }
+    if(m_s.size() > 1)
+    {
+        return false;
+    }
+    else if(m_s.empty())
+    {
+        return true;
+    }
+    else
+    {
+        return m_s.front().isOne();
     }
 }

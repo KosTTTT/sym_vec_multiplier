@@ -128,10 +128,7 @@ private:
         }
         void setZero();
         /*returns true if multiple is one*/
-        inline bool isOne() const noexcept
-        {
-            return m_arrUnits.empty() && !m_vec && m_sg && m_sg->isOne();
-        }
+        bool isOne() const noexcept;
         inline bool isMinusOne() const noexcept
         {
             return m_arrUnits.empty() && !m_vec && m_sg && m_sg->isMinusOne();
@@ -278,13 +275,14 @@ private:
     void clear_multiple();
     void clear_unit();
     static bool has_minus(Unit const & u);
-    //do we need brackets when u is in multiple? e.g. (7*r +1)*u*(8-i)
+    //do we need brackets when u is in multiple like (7*r +1)*u*(8-i)
     static bool needBm(Unit const & u);
     /**
      * @return can 'u' be multiplied without extra parenthesis needed around it, when 'u' is a factor in front of : u*(5+a)*(6+e)
      * E.g. u+u return false -5*(u+u) returns true
      */
     static bool cmwb(Unit const & u);
+    bool isOne() const noexcept;
 };
 
 
