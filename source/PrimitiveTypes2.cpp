@@ -1366,25 +1366,27 @@ bool Unit::needBm(Unit const & u)
 }
 bool Unit::cmwb(Unit const & u)
 {
-    if(!u.m_m)
+    if(u.m_m)
     {
-        if(u.m_s.size() > 1)
-            return false;
-        return cmwb(u.m_s.front());
-    }
-    else
-    {
-        if(u.m_s.empty() && !u.m_m.m_sg && !u.m_m.m_vec)
+        if(u.m_m.m_sg && (u.m_m.m_sg->isOne() == false))
+            return true;
+        if(u.m_m.m_vec)
+            return true;
+        for(auto const &sum : u.m_m.m_arrUnits)
         {
-            if(u.m_m.m_arrUnits.size()==1)
+            if(sum.size() > 1)
+                return false;
+            if(sum.front().isOne() == false)
             {
-                if(u.m_m.m_arrUnits.front().size() > 1)
-                    return false;
-                return cmwb(u.m_m.m_arrUnits.front().front());
+                return cmwb(sum.front());
             }
         }
-        return true;
     }
+    if(u.m_s.empty())
+        return true;
+    if(u.m_s.size() > 1)
+        return false;
+    return cmwb(u.m_s.front());
 }
 bool Unit::isOne() const noexcept
 {

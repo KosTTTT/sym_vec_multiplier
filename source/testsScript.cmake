@@ -42,3 +42,13 @@ f = 1/3*x*y*y*x + y*x*x*y
 expand f
 print f")
 testsFunc(${ttest} "t3.txt" "f.txt" "4/3*_x.dot(_y)*_y.dot(_x)")
+#test4
+set(ttest "syms t, AB0y,VABy, AB0z, VABz
+syms AC0z, VACz, AC0y, VACy
+ABty = AB0y + t*VABy
+ACtz = AC0z + t*VACz
+ABtz = AB0z + t*VABz
+ACty = AC0y + t*VACy
+Nx = ABty*ACtz - ABtz*ACty
+print Nx")
+testsFunc(${ttest} "t4.txt" "Nx.txt" "(AB0y+t*VABy)*(AC0z+t*VACz)-(AB0z+t*VABz)*(AC0y+t*VACy)")
